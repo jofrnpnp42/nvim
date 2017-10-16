@@ -1,0 +1,35 @@
+version: '{build}'
+skip_tags: false
+shallow_clone: true
+environment:
+  matrix:
+  - SCRIPT: contrib\appveyor-mingw.bat
+    RELEASE_ARTIFACT: true
+  - SCRIPT: contrib\appveyor-msvc.bat
+  - SCRIPT: contrib\appveyor-mingw-qt53.bat
+configuration:
+- RelWithDebInfo
+matrix:
+  fast_finish: true
+install:
+- ps: appveyor DownloadFile -FileName Neovim.zip "https://ci.appveyor.com/api/projects/neovim/neovim/artifacts/build/Neovim.zip?branch=master&job=Configuration%3A%20MINGW_64"
+- 7z x Neovim.zip
+- set PATH=%PATH%;%CD%\Neovim\bin;
+- nvim --version
+build_script:
+- cmd: '%SCRIPT%'
+artifacts:
+- path: INSTALL
+  name: neovim-qt
+deploy:
+  - provider: GitHub
+    description: Automated builds (Appveyor)
+    release: $(appveyor_repo_tag_name)
+    auth_token:
+      secure: Hx2tU6GZPZNB6qGjHcIqa1tEm8fVGXZUVfXyjboVrPcmA9OWMTXhLxayDzMMl3kD
+    artifact: neovim-qt.zip
+    prerelease: false
+    on:
+      appveyor_repo_tag: true
+      configuration: RelWithDebInfo
+      release_artifact: true

@@ -1,0 +1,22 @@
+[[plugins]]
+repo = 'Shougo/dein.vim'
+
+[[plugins]]
+repo = 'Shougo/vimproc.vim'
+build = 'make'
+
+[[plugins]]
+repo = 'Shougo/unite.vim.git'
+hook_add = 'source ~/.config/nvim/userautoload/plugins/plugins-unite.vim'
+
+[[plugins]]
+repo = "https://github.com/tyru/caw.vim.git"
+hook_add = '''
+vmap - <Plug>(caw:I:toggle)
+
+[[plugins]]
+repo = 'Shougo/vimfiler.vim'
+depends = 'unite.vim'
+hook_add = '''
+source ~/.config/nvim/userautoload/plugins/vimfiler.rc.vim
+'''
