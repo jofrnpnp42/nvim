@@ -35,7 +35,7 @@ colorscheme phd
 "------------------------------------------------------------------------
 " 編集に関する設定
 "------------------------------------------------------------------------
-set ambiwidth=double                    " 文字の見切れ対策
+set ambiwidth=double                    " 2バイト文字でカーソル位置がずれる問題の対策
 set iminsert=0 imsearch=0               " 挿入モード・検索モードでのデフォルトのIME状態設定
 set expandtab                           " タブ入力時に自動的にスペースに変える
 set tabstop=4                           " 1タブの幅
@@ -74,7 +74,6 @@ if 1    " 4-6. yank した文字列とカーソル位置の単語を置換する
     vnoremap    <silent> cy   ce<C-r>0<ESC>:let@=/=@1<CR>:noh<CR>
     nnoremap    <silent> ciy  ciw<C-r>0<ESC>:let@=/=@1<CR>:noh<CR>
 endif
-
 "------------------------------------------------------------------------
 " 検索に関する設定
 "------------------------------------------------------------------------
@@ -102,11 +101,6 @@ set nomousefocus  " マウスの移動でフォーカスを自動的に切替え
 set mousehide     " 入力時にマウスポインタを隠す (nomousehide:隠さない)
 set guioptions+=a " ビジュアル選択(D&D他)を自動的にクリップボードへ (:help guioptions_a)
 
-"------------------------------------------------------------------------
-" terminal設定
-"------------------------------------------------------------------------
-set sh=fish                         " シェルを指定する
-tnoremap <silent> <ESC> <C-\><C-n>  " Esc で端末を抜ける
 
 "------------------------------------------------------------------------
 " diffopt 設定
@@ -169,8 +163,11 @@ if dein#load_state('/home/neko/.config/nvim/')
   "------------------------------
   call dein#add('Shougo/neocomplcache.vim')  " NeoComlcache
   call dein#add('equalsraf/neovim-qt')
+  call dein#add('Shougo/unite.vim')
+  call dein#add('Shougo/vimfiler.vim')
   call dein#add('Shougo/neomru.vim')
-  call dein#add('Shougo/vimfiler')
+  call dein#add('Shougo/vinarise.vim')     " バイナリファイル編集"
+  call dein#add('AndrewRadev/linediff.vim') "行範囲のdiff
   call dein#add('LeafCage/yankround.vim')  " ヤンクバッファ
   call dein#add('junegunn/vim-easy-align')   " コードの自動整形
   call dein#add('Lokaltog/vim-easymotion')   " 高速移動
@@ -185,6 +182,9 @@ if dein#load_state('/home/neko/.config/nvim/')
   call dein#add('thinca/vim-qfreplace')
   call dein#add('AndrewRadev/linediff.vim')
   call dein#add('houtsnip/vim-emacscommandline')  " コマンドラインで emacs 操作をする
+  call dein#add('AndrewRadev/linediff.vim')
+  call dein#add('tpope/vim-surround') "surround
+  call dein#add('tpope/vim-repeat') "repeat surround
 
   "[ref] http://wakame.hatenablog.jp/entry/2016/10/09/174035
   "[ref] http://wakame.hatenablog.jp/entry/2017/05/04/144550
@@ -212,82 +212,35 @@ endif
 "---------------------------------
 "[start]   Neko プラグインインストール後の設定
 "---------------------------------
-"{{{
-" neocomplcache
-if filereadable(expand('$HOME/.config/nvim/userautoload/plugins/plugin_neocomplcache.vim'))
-    source $HOME/.config/nvim/userautoload/plugins/plugin_neocomplcache.vim
-endif
+let my_plugin_list = [
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_neocomplcache.vim"      ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_easyalign.vim"          ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugins-unite.vim"             ,
+\ "$HOME/.config/nvim/userautoload/plugins/vimfiler.rc.vim"               ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_indentguides.vim"       ,
+\ "$HOME/.config/nvim/userautoload/plugins/local_keymap.vim"              ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_yankround.vim"          ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_easymotion.vim"         ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_thumbnail.vim"          ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_textmanip.vim"          ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_lightline.vim"          ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_vim_open_browser.vim"   ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_qfixgrep.vim"
+\ ]
 
+let i = 0
+while i < len(my_plugin_list)
+    source `=my_plugin_list[i]`
+    let i = i + 1
+endwhile
+
+"{{{
+" ---------------------------------------------------------------
+" easyalign の使い方メモ
+" ---------------------------------------------------------------
 " コードの自動整形 (ビジュアルモードで範囲選択 → Enter → * → =)
 " http://baqamore.hatenablog.com/entry/2015/06/27/074459
-if filereadable(expand('$HOME/.config/nvim/userautoload/plugins/plugin_easyalign.vim'))
-    source $HOME/.config/nvim/userautoload/plugins/plugin_easyalign.vim
-endif
-
-" Unite
-if filereadable(expand('$HOME/.config/nvim/userautoload/plugins/plugins-unite.vim'))
-    source $HOME/.config/nvim/userautoload/plugins/plugins-unite.vim
-endif
-
-" indent-guides (gvimrc に書くと反映されない)
-if filereadable(expand('$HOME/.config/nvim/userautoload/plugins/plugin_indentguides.vim'))
-    source $HOME/.config/nvim/userautoload/plugins/plugin_indentguides.vim
-endif
-
-" キーマッピング
-if filereadable(expand('$HOME/.config/nvim/userautoload/plugins/local_keymap.vim'))
-    source $HOME/.config/nvim/userautoload/plugins/local_keymap.vim
-endif
-
-" YankRound の設定
-if filereadable(expand('$HOME/.config/nvim/userautoload/plugins/plugin_yankround.vim'))
-    source $HOME/.config/nvim/userautoload/plugins/plugin_yankround.vim
-endif
-
-" easy-motion
-if filereadable(expand('$HOME/.config/nvim/userautoload/plugins/plugin_easymotion.vim'))
-    source $HOME/.config/nvim/userautoload/plugins/plugin_easymotion.vim
-endif
-
-" vimfiler の設定
-" https://muunyblue.github.io/c95d62c68196b2d0c1c1de8c7eeb6d50.html#vimfiler を参考にして一部変更した
-    source ~/.config/nvim/userautoload/plugins/vimfiler.rc.vim
-" userautoload/dein/plugins.toml にて定義する
-
-"  Thumnail の設定
-if  filereadable(expand('$HOME/.config/nvim/userautoload/plugins/plugin_thumbnail.vim'))
-    source $HOME/.config/nvim/userautoload/plugins/plugin_thumbnail.vim
-endif
-
 " vim-textmanip (矩形のコピーや移動)
-if filereadable(expand('$HOME/.config/nvim/userautoload/plugins/plugin_textmanip.vim'))
-    source $HOME/.config/nvim/userautoload/plugins/plugin_textmanip.vim
-endif
-
-" vim-lightline
-if filereadable(expand('$HOME/.config/nvim/userautoload/plugins/plugin_lightline.vim'))
-    source $HOME/.config/nvim/userautoload/plugins/plugin_lightline.vim
-endif
-
-" Browser
-if filereadable(expand('$HOME/.config/nvim/userautoload/plugins/plugin_vim_open_browser.vim'))
-    source $HOME/.config/nvim/userautoload/plugins/plugin_vim_open_browser.vim
-endif
-
-" QuickFixGrep
-if filereadable(expand('$HOME/.config/nvim/userautoload/plugins/plugin_qfixgrep.vim'))
-    source $HOME/.config/nvim/userautoload/plugins/plugin_qfixgrep.vim
-endif
-
-" TagBar
-if filereadable(expand('$HOME/.config/nvim/userautoload/plugins/plugin_tagbar.vim'))
-    source $HOME/.config/nvim/userautoload/plugins/plugin_tagbar.vim
-endif
-
-" SrcExpl with Vimfiler, Unite and TagBar
-if filereadable(expand('$HOME/.config/nvim/userautoload/plugins/plugin_srcexpl.vim'))
-    source $HOME/.config/nvim/userautoload/plugins/plugin_srcexpl.vim
-endif
 
 "}}}
 "---------------------------------

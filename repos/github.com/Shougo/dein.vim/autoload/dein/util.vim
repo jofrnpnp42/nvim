@@ -27,12 +27,6 @@ function! dein#util#_is_mac() abort
       \   (!isdirectory('/proc') && executable('sw_vers')))
 endfunction
 
-function! dein#util#_is_sudo() abort
-  return $SUDO_USER !=# '' && $USER !=# $SUDO_USER
-      \ && $HOME !=# expand('~'.$USER)
-      \ && $HOME ==# expand('~'.$SUDO_USER)
-endfunction
-
 function! dein#util#_get_base_path() abort
   return g:dein#_base_path
 endfunction
@@ -176,12 +170,11 @@ function! dein#util#_check_clean() abort
   let plugins_directories = map(values(dein#get()), 'v:val.path')
   return filter(split(globpath(dein#util#_get_base_path(),
         \ 'repos/*/*/*'), "\n"), "isdirectory(v:val)
-        \   && index(plugins_directories, v:val) < 0
-        \   && empty(dein#get(fnamemodify(v:val, ':t')))")
+        \   && index(plugins_directories, v:val) < 0")
 endfunction
 
 function! dein#util#_writefile(path, list) abort
-  if dein#util#_is_sudo() || !filewritable(dein#util#_get_cache_path())
+  if g:dein#_is_sudo || !filewritable(dein#util#_get_cache_path())
     return 1
   endif
 
@@ -231,7 +224,7 @@ function! dein#util#_save_cache(vimrcs, is_state, is_starting) abort
   call writefile([string(a:vimrcs),
         \         dein#_vim2json(plugins), dein#_vim2json(g:dein#_ftplugin)],
         \ get(g:, 'dein#cache_directory', g:dein#_base_path)
-        \ .'/cache_'.fnamemodify(v:progname, ':r'))
+        \ .'/cache_' . g:dein#_progname)
 endfunction
 function! dein#util#_check_vimrcs() abort
   let time = getftime(dein#util#_get_runtime_path())
@@ -239,13 +232,14 @@ function! dein#util#_check_vimrcs() abort
         \ 'time < v:val'))
   if ret
     call dein#clear_state()
-
-    if [string(g:dein#_cache_version)] +
-          \ sort(map(values(g:dein#_plugins), 'v:val.repo'))
-          \ !=# dein#util#_load_merged_plugins()
-      call dein#recache_runtimepath()
-    endif
   endif
+
+  if [string(g:dein#_cache_version)] +
+        \ sort(map(values(g:dein#_plugins), 'v:val.repo'))
+        \ !=# dein#util#_load_merged_plugins()
+    call dein#recache_runtimepath()
+  endif
+
   return ret
 endfunction
 function! dein#util#_load_merged_plugins() abort
@@ -285,7 +279,8 @@ function! dein#util#_save_state(is_starting) abort
   " Version check
 
   let lines = [
-        \ 'if g:dein#_cache_version != ' . g:dein#_cache_version .
+        \ 'if g:dein#_cache_version !=# ' . g:dein#_cache_version . ' || ' .
+        \ 'g:dein#_init_runtimepath !=# ' . string(g:dein#_init_runtimepath) .
         \      ' | throw ''Cache loading error'' | endif',
         \ 'let [plugins, ftplugin] = dein#load_cache_raw('.
         \      string(g:dein#_vimrcs) .')',
@@ -334,7 +329,7 @@ function! dein#util#_save_state(is_starting) abort
   endfor
 
   call writefile(lines, get(g:, 'dein#cache_directory', g:dein#_base_path)
-        \ .'/state_'.fnamemodify(v:progname, ':r').'.vim')
+        \ .'/state_' . g:dein#_progname . '.vim')
 endfunction
 function! dein#util#_clear_state() abort
   let base = get(g:, 'dein#cache_directory', g:dein#_base_path)
@@ -397,7 +392,7 @@ function! dein#util#_begin(path, vimrcs) abort
           \ .' under "&runtimepath/plugin"')
     return 1
   endif
-  call insert(rtps, g:dein#_runtime_path, idx - 1)
+  call insert(rtps, g:dein#_runtime_path, idx)
   call dein#util#_add_after(rtps, g:dein#_runtime_path.'/after')
   let &runtimepath = dein#util#_join_rtp(rtps,
         \ &runtimepath, g:dein#_runtime_path)
@@ -410,6 +405,11 @@ function! dein#util#_end() abort
 
   let g:dein#_block_level -= 1
 
+  if !has('vim_starting')
+    call dein#source(filter(values(g:dein#_plugins),
+        \ "!v:val.lazy && !v:val.sourced && v:val.rtp !=# ''"))
+  endif
+
   " Add runtimepath
   let rtps = dein#util#_split_rtp(&runtimepath)
   let index = index(rtps, g:dein#_runtime_path)
@@ -419,6 +419,8 @@ function! dein#util#_end() abort
   endif
 
   let depends = []
+  let sourced = has('vim_starting') &&
+        \ (!exists('&loadplugins') || &loadplugins)
   for plugin in filter(values(g:dein#_plugins),
         \ "!v:val.lazy && !v:val.sourced && v:val.rtp !=# ''")
     " Load dependencies
@@ -433,7 +435,7 @@ function! dein#util#_end() abort
       endif
     endif
 
-    let plugin.sourced = 1
+    let plugin.sourced = sourced
   endfor
   let &runtimepath = dein#util#_join_rtp(rtps, &runtimepath, '')
 
@@ -481,7 +483,9 @@ endfunction
 function! dein#util#_call_hook(hook_name, ...) abort
   let hook = 'hook_' . a:hook_name
   let plugins = filter(dein#util#_get_plugins((a:0 ? a:1 : [])),
-        \ 'v:val.sourced && has_key(v:val, hook) && isdirectory(v:val.path)')
+        \ "((a:hook_name !=# 'source'
+        \    && a:hook_name !=# 'post_source') || v:val.sourced)
+        \   && has_key(v:val, hook) && isdirectory(v:val.path)")
 
   for plugin in filter(dein#util#_tsort(plugins),
         \ 'has_key(v:val, hook)')

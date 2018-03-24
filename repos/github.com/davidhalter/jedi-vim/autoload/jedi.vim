@@ -364,7 +364,7 @@ function! jedi#show_documentation() abort
             silent execute 'sbuffer '.bn
         endif
     else
-        split '__doc__'
+        split __doc__
     endif
 
     setlocal modifiable
@@ -569,10 +569,21 @@ function! jedi#complete_string(autocomplete) abort
         set completeopt+=menuone
         set completeopt-=menu
         if &completeopt !~# 'noinsert\|noselect'
-            if g:jedi#popup_select_first
-                set completeopt+=noinsert
+            " Patch 775 introduced noinsert and noselect, previously these
+            " options didn't exist. Setting them in earlier versions results in
+            " errors (E474).
+            if has('patch-7.4-775')
+                if g:jedi#popup_select_first
+                    set completeopt+=noinsert
+                else
+                    set completeopt+=noselect
+                endif
             else
-                set completeopt+=noselect
+                " To pass the tests we use this, it seems to get the closest to
+                " the other options. I'm really not sure if this properly
+                " works, but VIM 7.4-775 is already pretty old, so it might not
+                " be a problem anymore in a few years.
+                set completeopt+=longest
             endif
         endif
     elseif pumvisible()
@@ -602,6 +613,24 @@ function! jedi#smart_auto_mappings() abort
     return "\<space>"
 endfunction
 
+
+function! jedi#setup_completion() abort
+    " We need our own omnifunc, so this overrides the omnifunc set by
+    " $VIMRUNTIME/ftplugin/python.vim.
+    setlocal omnifunc=jedi#completions
+
+    " map ctrl+space for autocompletion
+    if g:jedi#completions_command ==# '<C-Space>'
+        " In terminals, <C-Space> sometimes equals <Nul>.
+        imap <buffer> <Nul> <C-Space>
+        smap <buffer> <Nul> <C-Space>
+    endif
+    if len(g:jedi#completions_command)
+        execute 'inoremap <expr> <buffer> '.g:jedi#completions_command.' jedi#complete_string(0)'
+        " A separate mapping for select mode: deletes and completes.
+        execute 'snoremap <expr> <buffer> '.g:jedi#completions_command." '\<C-g>c'.jedi#complete_string(0)"
+    endif
+endfunction
 
 "PythonJedi jedi_vim.jedi.set_debug_function(jedi_vim.print_to_stdout, speed=True, warnings=False, notices=False)
 "PythonJedi jedi_vim.jedi.set_debug_function(jedi_vim.print_to_stdout)

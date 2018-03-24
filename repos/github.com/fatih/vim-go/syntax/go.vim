@@ -3,36 +3,13 @@
 " license that can be found in the LICENSE file.
 "
 " go.vim: Vim syntax file for Go.
-"
-" Options:
-"   There are some options for customizing the highlighting; the recommended
-"   settings are the default values, but you can write:
-"     let OPTION_NAME = 0
-"   in your ~/.vimrc file to disable particular options. You can also write:
-"     let OPTION_NAME = 1
-"   to enable particular options. At present, all options default to off:
-"
-"   - go_highlight_array_whitespace_error
-"     Highlights white space after "[]".
-"   - go_highlight_chan_whitespace_error
-"     Highlights white space around the communications operator that don't follow
-"     the standard style.
-"   - go_highlight_extra_types
-"     Highlights commonly used library types (io.Reader, etc.).
-"   - go_highlight_space_tab_error
-"     Highlights instances of tabs following spaces.
-"   - go_highlight_trailing_whitespace_error
-"     Highlights trailing white space.
-"   - go_highlight_string_spellcheck
-"     Specifies that strings should be spell checked
-"   - go_highlight_format_strings
-"     Highlights printf-style operators inside string literals.
 
 " Quit when a (custom) syntax file was already loaded
 if exists("b:current_syntax")
   finish
 endif
 
+" Set settings to default values.
 if !exists("g:go_highlight_array_whitespace_error")
   let g:go_highlight_array_whitespace_error = 0
 endif
@@ -61,8 +38,12 @@ if !exists("g:go_highlight_functions")
   let g:go_highlight_functions = 0
 endif
 
-if !exists("g:go_highlight_methods")
-  let g:go_highlight_methods = 0
+if !exists("g:go_highlight_function_arguments")
+  let g:go_highlight_function_arguments = 0
+endif
+
+if !exists("g:go_highlight_function_calls")
+  let g:go_highlight_function_calls = 0
 endif
 
 if !exists("g:go_highlight_fields")
@@ -117,7 +98,7 @@ if exists("g:go_fold_enable")
   if index(g:go_fold_enable, 'package_comment') == -1
     let s:fold_package_comment = 0
   endif
- 
+
   " Disabled by default.
   if index(g:go_fold_enable, 'comment') > -1
     let s:fold_comment = 1
@@ -221,7 +202,19 @@ else
 endif
 
 if g:go_highlight_format_strings != 0
-  syn match       goFormatSpecifier   /\([^%]\(%%\)*\)\@<=%[-#0 +]*\%(\*\|\d\+\)\=\%(\.\%(\*\|\d\+\)\)*[vTtbcdoqxXUeEfgGsp]/ contained containedin=goString
+  " [n] notation is valid for specifying explicit argument indexes
+  " 1. Match a literal % not preceded by a %.
+  " 2. Match any number of -, #, 0, space, or +
+  " 3. Match * or [n]* or any number or nothing before a .
+  " 4. Match * or [n]* or any number or nothing after a .
+  " 5. Match [n] or nothing before a verb
+  " 6. Match a formatting verb
+  syn match       goFormatSpecifier   /\
+        \([^%]\(%%\)*\)\
+        \@<=%[-#0 +]*\
+        \%(\%(\%(\[\d\+\]\)\=\*\)\|\d\+\)\=\
+        \%(\.\%(\%(\%(\[\d\+\]\)\=\*\)\|\d\+\)\=\)\=\
+        \%(\[\d\+\]\)\=[vTtbcdoqxXUeEfFgGsp]/ contained containedin=goString,goRawString
   hi def link     goFormatSpecifier   goSpecialString
 endif
 
@@ -252,14 +245,14 @@ endif
 " var, const
 if s:fold_varconst
   syn region    goVar               start='var ('   end='^\s*)$' transparent fold
-                        \ contains=ALLBUT,goParen,goBlock,goFunction,goTypeName,goReceiverType,goReceiverVar
+                        \ contains=ALLBUT,goParen,goBlock,goFunction,goTypeName,goReceiverType,goReceiverVar,goArgumentName,goArgumentType,goSimpleArguments
   syn region    goConst             start='const (' end='^\s*)$' transparent fold
-                        \ contains=ALLBUT,goParen,goBlock,goFunction,goTypeName,goReceiverType,goReceiverVar
+                        \ contains=ALLBUT,goParen,goBlock,goFunction,goTypeName,goReceiverType,goReceiverVar,goArgumentName,goArgumentType,goSimpleArguments
 else
-  syn region    goVar               start='var ('   end='^\s*)$' transparent 
-                        \ contains=ALLBUT,goParen,goBlock,goFunction,goTypeName,goReceiverType,goReceiverVar
+  syn region    goVar               start='var ('   end='^\s*)$' transparent
+                        \ contains=ALLBUT,goParen,goBlock,goFunction,goTypeName,goReceiverType,goReceiverVar,goArgumentName,goArgumentType,goSimpleArguments
   syn region    goConst             start='const (' end='^\s*)$' transparent
-                        \ contains=ALLBUT,goParen,goBlock,goFunction,goTypeName,goReceiverType,goReceiverVar
+                        \ contains=ALLBUT,goParen,goBlock,goFunction,goTypeName,goReceiverType,goReceiverVar,goArgumentName,goArgumentType,goSimpleArguments
 endif
 
 " Single-line var, const, and import.
@@ -366,25 +359,31 @@ endif
 hi def link     goOperator          Operator
 
 " Functions;
-if g:go_highlight_functions != 0
-  syn match goDeclaration       /\<func\>/ nextgroup=goReceiver,goFunction skipwhite skipnl
-  syn match goReceiver          /(\(\w\|[ *]\)\+)/ contained nextgroup=goFunction contains=goReceiverVar skipwhite skipnl
-  syn match goReceiverVar       /\w\+/ nextgroup=goPointerOperator,goReceiverType skipwhite skipnl contained
+if g:go_highlight_functions isnot 0 || g:go_highlight_function_arguments isnot 0
+  syn match goDeclaration       /\<func\>/ nextgroup=goReceiver,goFunction,goSimpleArguments skipwhite skipnl
+  syn match goReceiverVar       /\w\+\ze\s\+\(\w\|\*\)/ nextgroup=goPointerOperator,goReceiverType skipwhite skipnl contained
   syn match goPointerOperator   /\*/ nextgroup=goReceiverType contained skipwhite skipnl
+  syn match goFunction          /\w\+/ nextgroup=goSimpleArguments contained skipwhite skipnl
   syn match goReceiverType      /\w\+/ contained
-  syn match goFunction          /\w\+/ contained
-  syn match goFunctionCall      /\w\+\ze(/ contains=GoBuiltins,goDeclaration
+if g:go_highlight_function_arguments isnot 0
+  syn match goSimpleArguments   /(\(\w\|\_s\|[*\.\[\],\{\}<>-]\)*)/ contained contains=goArgumentName nextgroup=goSimpleArguments skipwhite skipnl
+  syn match goArgumentName      /\w\+\(\s*,\s*\w\+\)*\ze\s\+\(\w\|\.\|\*\|\[\)/ contained nextgroup=goArgumentType skipwhite skipnl
+  syn match goArgumentType      /\([^,)]\|\_s\)\+,\?/ contained nextgroup=goArgumentName skipwhite skipnl
+                        \ contains=goVarArgs,goType,goSignedInts,goUnsignedInts,goFloats,goComplexes,goDeclType,goBlock
+  hi def link   goReceiverVar       goArgumentName
+  hi def link   goArgumentName      Identifier
+endif
+  syn match goReceiver          /(\s*\w\+\(\s\+\*\?\s*\w\+\)\?\s*)\ze\s*\w/ contained nextgroup=goFunction contains=goReceiverVar skipwhite skipnl
 else
   syn keyword goDeclaration func
 endif
 hi def link     goFunction          Function
-hi def link     goFunctionCall      Type
 
-" Methods;
-if g:go_highlight_methods != 0
-  syn match goMethodCall            /\.\w\+\ze(/hs=s+1
+" Function calls;
+if g:go_highlight_function_calls != 0
+  syn match goFunctionCall      /\w\+\ze(/ contains=goBuiltins,goDeclaration
 endif
-hi def link     goMethodCall        Type
+hi def link     goFunctionCall      Type
 
 " Fields;
 if g:go_highlight_fields != 0
@@ -454,7 +453,7 @@ if g:go_highlight_build_constraints != 0 || s:fold_package_comment
         \ . ' contains=@goCommentGroup,@Spell'
         \ . (s:fold_package_comment ? ' fold' : '')
   exe 'syn region  goPackageComment    start=/\v\/\*.*\n(.*\n)*\s*\*\/\npackage/'
-        \ . ' end=/\v\n\s*package/he=e-7,me=e-7,re=e-7'
+        \ . ' end=/\v\*\/\n\s*package/he=e-7,me=e-7,re=e-7'
         \ . ' contains=@goCommentGroup,@Spell'
         \ . (s:fold_package_comment ? ' fold' : '')
   hi def link goPackageComment    Comment

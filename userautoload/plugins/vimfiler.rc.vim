@@ -13,7 +13,7 @@ let g:vimfiler_as_default_explorer = 1
 autocmd VimEnter * VimFiler -split -simple -winwidth=40 -no-quit -no-focus
 nnoremap <leader>e :VimFilerExplore -split -winwidth=40 -find -no-quit -no-focus<Cr>
 "key mapping
-autocmd MyAutoCmd FileType vimfiler call s:vimfiler_my_settings()
+"autocmd MyAutoCmd FileType vimfiler call s:vimfiler_my_settings()
 function! s:vimfiler_my_settings()
   nnoremap <silent><buffer><expr> v vimfiler#do_switch_action('vsplit')
   nnoremap <silent><buffer><expr> s vimfiler#do_switch_action('split')
