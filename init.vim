@@ -161,6 +161,7 @@ if dein#load_state('/home/neko/.config/nvim/')
   "------------------------------
   "[start]  Neko dein によるプラグイン管理
   "------------------------------
+  call dein#add('Shougo/vimproc')
   call dein#add('Shougo/neocomplcache.vim')  " NeoComlcache
   call dein#add('equalsraf/neovim-qt')
   call dein#add('Shougo/unite.vim')
@@ -188,8 +189,8 @@ if dein#load_state('/home/neko/.config/nvim/')
 
   "[ref] http://wakame.hatenablog.jp/entry/2016/10/09/174035
   "[ref] http://wakame.hatenablog.jp/entry/2017/05/04/144550
-  call dein#load_toml('~/.config/nvim/userautoload/dein/plugins.toml', {'lazy': 0})
-  call dein#load_toml('~/.config/nvim/userautoload/dein/plugins-lazy.toml', {'lazy': 1})
+  " call dein#load_toml('~/.config/nvim/userautoload/dein/plugins.toml', {'lazy': 0})
+  " call dein#load_toml('~/.config/nvim/userautoload/dein/plugins-lazy.toml', {'lazy': 1})
 
   "------------------------------
   "[end]    Neko dein によるプラグイン管理
@@ -216,7 +217,6 @@ let my_plugin_list = [
 \ "$HOME/.config/nvim/userautoload/plugins/plugin_neocomplcache.vim"      ,
 \ "$HOME/.config/nvim/userautoload/plugins/plugin_easyalign.vim"          ,
 \ "$HOME/.config/nvim/userautoload/plugins/plugins-unite.vim"             ,
-\ "$HOME/.config/nvim/userautoload/plugins/vimfiler.rc.vim"               ,
 \ "$HOME/.config/nvim/userautoload/plugins/plugin_indentguides.vim"       ,
 \ "$HOME/.config/nvim/userautoload/plugins/local_keymap.vim"              ,
 \ "$HOME/.config/nvim/userautoload/plugins/plugin_yankround.vim"          ,
@@ -225,12 +225,16 @@ let my_plugin_list = [
 \ "$HOME/.config/nvim/userautoload/plugins/plugin_textmanip.vim"          ,
 \ "$HOME/.config/nvim/userautoload/plugins/plugin_lightline.vim"          ,
 \ "$HOME/.config/nvim/userautoload/plugins/plugin_vim_open_browser.vim"   ,
-\ "$HOME/.config/nvim/userautoload/plugins/plugin_qfixgrep.vim"
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_qfixgrep.vim"           ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_vimfiler.vim"
 \ ]
 
 let i = 0
 while i < len(my_plugin_list)
-    source `=my_plugin_list[i]`
+    let f = my_plugin_list[i]
+    if filereadable(expand(f))
+        source `=f`
+    endif
     let i = i + 1
 endwhile
 
