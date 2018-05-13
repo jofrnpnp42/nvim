@@ -19,4 +19,3 @@ hook_add = 'source ~/.config/nvim/userautoload/plugins/plugins-unite-outline.vim
 repo = 'hewes/unite-gtags'
 hook_add = 'source ~/.config/nvim/userautoload/plugins/plugins-unite-gtags.vim'
 depends = ['unite']
-

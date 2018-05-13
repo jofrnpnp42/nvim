@@ -73,7 +73,7 @@ void ShellWidget::setFont(const QFont& f)
 	QWidget::setFont(f);
 }
 
-void ShellWidget::setLineSpace(unsigned int height)
+void ShellWidget::setLineSpace(int height)
 {
 	if (height != m_lineSpace) {
 		m_lineSpace = height;
@@ -155,7 +155,7 @@ void ShellWidget::paintEvent(QPaintEvent *ev)
 					}
 
 					// Draw chars at the baseline
-					QPoint pos(r.left(), r.top()+m_ascent+m_lineSpace);
+					QPoint pos(r.left(), r.top()+m_ascent+(m_lineSpace / 2));
 					p.drawText(pos, QString(cell.c));
 				}
 

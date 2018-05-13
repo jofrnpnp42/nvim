@@ -31,7 +31,6 @@ if has("gui")
 endif
 colorscheme phd
 
-
 "------------------------------------------------------------------------
 " 編集に関する設定
 "------------------------------------------------------------------------
@@ -74,6 +73,14 @@ if 1    " 4-6. yank した文字列とカーソル位置の単語を置換する
     vnoremap    <silent> cy   ce<C-r>0<ESC>:let@=/=@1<CR>:noh<CR>
     nnoremap    <silent> ciy  ciw<C-r>0<ESC>:let@=/=@1<CR>:noh<CR>
 endif
+
+" 言語によりインデント幅を変える
+augroup fileTypeIndent
+    autocmd!
+    autocmd BufNewFile,BufRead *.py setlocal tabstop=4 softtabstop=4 shiftwidth=4
+    autocmd BufNewFile,BufRead *.rb setlocal tabstop=2 softtabstop=2 shiftwidth=2
+augroup END
+
 "------------------------------------------------------------------------
 " 検索に関する設定
 "------------------------------------------------------------------------

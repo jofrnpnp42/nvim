@@ -1,37 +1,93 @@
-" Make more like emacs
-cnoremap <C-A> <Home>
-cnoremap <C-B> <Left>
-cnoremap <C-F> <Right>
-cnoremap <C-P> <Up>
-cnoremap <C-N> <Down>
-cnoremap <Esc>r <C-F>?
-cmap <M-R> <Esc>r
+if !exists('g:EmacsCommandLineMaxUndoHistory')
+    let g:EmacsCommandLineMaxUndoHistory = 100
+endif
+if !exists('g:EmacsCommandLineOldMapPrefix')
+    let g:EmacsCommandLineOldMapPrefix = '<C-O>'
+endif
+if !exists('g:EmacsCommandLineWordCharCharacterClass')
+    " Latin-1, Latin Extended-A, Extended-B, Greek and Coptic, and Cyrillic scripts:
+    "let g:EmacsCommandLineWordCharCharacterClass = 'a-zA-Z0-9_À-ÖØ-öø-ÿĀ-ǿȀ-ɏͰ-ͳͶͷΆΈΉΊΌΎ-ΡΣ-ώϚ-ϯϷϸϺϻЀ-ҁ'
+    " Latin-1 (the most common European letters):
+    let g:EmacsCommandLineWordCharCharacterClass = 'a-zA-Z0-9_À-ÖØ-öø-ÿ'
+    " Basic Latin (unaccented) word characters:
+    "let g:EmacsCommandLineWordCharCharacterClass = '\w'
+endif
+if !exists('g:EmacsCommandLineSearchCommandLineMapOnlyWhenEmpty')
+    let g:EmacsCommandLineSearchCommandLineMapOnlyWhenEmpty = 1
+endif
+if !exists('g:EmacsCommandLineForwardCharNoMapAtEnd')
+    let g:EmacsCommandLineForwardCharNoMapAtEnd = 1
+endif
+if !exists('g:EmacsCommandLineEndOfLineNoMapAtEnd')
+    let g:EmacsCommandLineEndOfLineNoMapAtEnd = 1
+endif
+if !exists('g:EmacsCommandLineDeleteCharNoMapAtEnd')
+    let g:EmacsCommandLineDeleteCharNoMapAtEnd = 1
+endif
+if !exists('g:EmacsCommandLineKillLineNoMapAtEnd')
+    let g:EmacsCommandLineKillLineNoMapAtEnd = 1
+endif
 
-" Maps to old shortcuts using Ctrl-O as a prefix
-cnoremap <C-O><C-A>      <C-A>
-cnoremap <C-O><C-E>      <C-E>
-cnoremap <C-O><C-B>      <C-B>
-cnoremap <C-O><C-F>      <C-F>
-cnoremap <C-O><C-P>      <C-P>
-cnoremap <C-O><C-D>      <C-D>
-cnoremap <C-O><C-K>      <C-K>
-cnoremap <C-O><C-U>      <C-U>
-cnoremap <C-O><C-W>      <C-W>
-cnoremap <C-O><C-Y>      <C-Y>
-cnoremap <C-O><C-Z>      <C-Z>
-cnoremap <C-O><C-_>      <C-_>
-cnoremap <C-O><C-X><C-U> <C-X><C-U>
-cnoremap <C-O><Del>      <Del>
-cnoremap <C-O><BS>       <BS>
+let s:mappings = {
+   \ 'ForwardChar':              ['<C-F>', '<Right>'],
+   \ 'BackwardChar':             ['<C-B>', '<Left>'],
+   \ 'BeginningOfLine':          ['<C-A>', '<Home>'],
+   \ 'EndOfLine':                ['<C-E>', '<End>'],
+   \ 'OlderMatchingCommandLine': ['<C-P>', '<Up>'],
+   \ 'NewerMatchingCommandLine': ['<C-N>', '<Down>'],
+   \ 'FirstLineInHistory':       ['<M-<>', '<C-F>gg<C-C>'],
+   \ 'LastLineInHistory':        ['<M->>', '<C-F>Gk<C-C>'],
+   \ 'SearchCommandLine':        ['<C-R>', '<C-F>?'],
+   \ 'AbortCommand':             ['<C-G>', '<C-C>']
+   \ }
+if !has('gui_running') && !has('nvim')
+    let s:mappings['FirstLineInHistory'][0] = '<Esc><'
+    let s:mappings['LastLineInHistory'][0]  = '<Esc>>'
+endif
+for s:key in keys(s:mappings)
+    if !exists('g:EmacsCommandLine' . s:key . 'Disable') || g:EmacsCommandLine{s:key}Disable != 1
+        let s:{s:key}MapDefined = exists('g:EmacsCommandLine' . s:key . 'Map')
+        if !s:{s:key}MapDefined
+            let g:EmacsCommandLine{s:key}Map = s:mappings[s:key][0]
+        endif
+        if type(g:EmacsCommandLine{s:key}Map) == 3
+            for s:mapping in g:EmacsCommandLine{s:key}Map
+                if exists('g:EmacsCommandLine' . s:key . 'MapOnlyWhenEmpty') && g:EmacsCommandLine{s:key}MapOnlyWhenEmpty == 1
+                    exe 'cnoremap <expr> ' . s:mapping . ' ' .
+                      \ 'strlen(getcmdline())>0?''' . s:mapping . ''':''' . s:mappings[s:key][1] . ''''
+                elseif exists('g:EmacsCommandLine' . s:key . 'NoMapAtEnd') && g:EmacsCommandLine{s:key}NoMapAtEnd == 1
+                    exe 'cnoremap <expr> ' . s:mapping . ' ' .
+                      \ 'getcmdpos()>strlen(getcmdline())?''' . s:mapping . ''':''' . s:mappings[s:key][1] . ''''
+                else
+                    exe 'cnoremap ' . s:mapping . ' ' . s:mappings[s:key][1]
+                endif
+                if maparg(g:EmacsCommandLineOldMapPrefix . s:mapping, 'c') == ''
+                    exe 'cnoremap ' . g:EmacsCommandLineOldMapPrefix . s:mapping . ' ' . s:mapping
+                endif
+            endfor
+        else
+            if exists('g:EmacsCommandLine' . s:key . 'MapOnlyWhenEmpty') && g:EmacsCommandLine{s:key}MapOnlyWhenEmpty == 1
+                exe 'cnoremap <expr> ' . g:EmacsCommandLine{s:key}Map . ' ' .
+                  \ 'strlen(getcmdline())>0?''' . g:EmacsCommandLine{s:key}Map . ''':''' . s:mappings[s:key][1] . ''''
+            elseif exists('g:EmacsCommandLine' . s:key . 'NoMapAtEnd') && g:EmacsCommandLine{s:key}NoMapAtEnd == 1
+                exe 'cnoremap <expr> ' . g:EmacsCommandLine{s:key}Map . ' ' .
+                  \ 'getcmdpos()>strlen(getcmdline())?''' . g:EmacsCommandLine{s:key}Map . ''':''' . s:mappings[s:key][1] . ''''
+            else
+                exe 'cnoremap ' . g:EmacsCommandLine{s:key}Map . ' ' . s:mappings[s:key][1]
+            endif
+            if maparg(g:EmacsCommandLineOldMapPrefix . g:EmacsCommandLine{s:key}Map, 'c') == ''
+                exe 'cnoremap ' . g:EmacsCommandLineOldMapPrefix . g:EmacsCommandLine{s:key}Map . ' ' . g:EmacsCommandLine{s:key}Map
+            endif
+        endif
+    endif
+endfor
 
-cnoremap <Esc>f <C-\>e<SID>ForwardWord()<CR>
-cmap <M-F> <Esc>f
 function! <SID>ForwardWord()
     let l:loc = strpart(getcmdline(), 0, getcmdpos() - 1)
     let l:roc = strpart(getcmdline(), getcmdpos() - 1)
-    if (l:roc =~ '\v^\s*\w')
-        let l:rem = matchstr(l:roc, '\v^\s*\w+')
-    elseif (l:roc =~ '\v^\s*[^[:alnum:]_[:blank:]]')
+    if l:roc =~ '\v^\s*[' . g:EmacsCommandLineWordCharCharacterClass . ']'
+        let l:rem = matchstr(l:roc, '\v^\s*[' . g:EmacsCommandLineWordCharCharacterClass . ']+')
+    elseif l:roc =~ '\v^\s*[^[:alnum:]_[:blank:]]'
         let l:rem = matchstr(l:roc, '\v^\s*[^[:alnum:]_[:blank:]]+')
     else
         call setcmdpos(strlen(getcmdline()) + 1)
@@ -41,14 +97,12 @@ function! <SID>ForwardWord()
     return getcmdline()
 endfunction
 
-cnoremap <Esc>b <C-\>e<SID>BackwardWord()<CR>
-cmap <M-B> <Esc>b
 function! <SID>BackwardWord()
     let l:loc = strpart(getcmdline(), 0, getcmdpos() - 1)
     let l:roc = strpart(getcmdline(), getcmdpos() - 1)
-    if (l:loc =~ '\v\w\s*$')
-        let l:rem = matchstr(l:loc, '\v\w+\s*$')
-    elseif (l:loc =~ '\v[^[:alnum:]_[:blank:]]\s*$')
+    if l:loc =~ '\v[' . g:EmacsCommandLineWordCharCharacterClass . ']\s*$'
+        let l:rem = matchstr(l:loc, '\v[' . g:EmacsCommandLineWordCharCharacterClass . ']+\s*$')
+    elseif l:loc =~ '\v[^[:alnum:]_[:blank:]]\s*$'
         let l:rem = matchstr(l:loc, '\v[^[:alnum:]_[:blank:]]+\s*$')
     else
         call setcmdpos(1)
@@ -59,78 +113,71 @@ function! <SID>BackwardWord()
     return getcmdline()
 endfunction
 
-cnoremap <Del> <C-\>e<SID>DeleteChar()<CR>
-cmap <C-D> <Del>
 function! <SID>DeleteChar()
-    call <SID>saveUndoHistory(getcmdline(), getcmdpos())
+    call <SID>SaveUndoHistory(getcmdline(), getcmdpos())
     let l:cmd     = getcmdline()
     " Get length of character to be deleted (in bytes)
-    let l:charlen = strlen(substitute(strpart(l:cmd, getcmdpos() - 1), '^\(.\).*', '\1', ''))
+    let l:charlen = strlen(matchstr(strpart(l:cmd, getcmdpos() - 1), '^.'))
     let l:rem     = strpart(l:cmd, getcmdpos() - 1, l:charlen)
-    if ('' != l:rem)
+    if '' != l:rem
         let @c = l:rem
     endif
     let l:ret = strpart(l:cmd, 0, getcmdpos() - 1) . strpart(l:cmd, getcmdpos() + l:charlen - 1)
-    call <SID>saveUndoHistory(l:ret, getcmdpos())
+    call <SID>SaveUndoHistory(l:ret, getcmdpos())
     return l:ret
 endfunction
 
-cnoremap <BS> <C-\>e<SID>BackwardDeleteChar()<CR>
 function! <SID>BackwardDeleteChar()
-    call <SID>saveUndoHistory(getcmdline(), getcmdpos())
-    if (getcmdpos() < 2)
+    call <SID>SaveUndoHistory(getcmdline(), getcmdpos())
+    if getcmdpos() < 2
         return getcmdline()
     endif
     let l:cmd     = getcmdline()
     " Get length of character to be deleted (in bytes)
-    let l:charlen = strlen(substitute(strpart(l:cmd, 0, getcmdpos() - 1), '.*\(.\)$', '\1', ''))
+    let l:charlen = strlen(matchstr(strpart(l:cmd, 0, getcmdpos() - 1), '.$'))
     let l:pos     = getcmdpos() - l:charlen
     let l:rem     = strpart(l:cmd, getcmdpos() - l:charlen - 1, l:charlen)
     let @c        = l:rem
     let l:ret     = strpart(l:cmd, 0, l:pos - 1) . strpart(l:cmd, getcmdpos() - 1)
-    call <SID>saveUndoHistory(l:ret, l:pos)
+    call <SID>SaveUndoHistory(l:ret, l:pos)
     call setcmdpos(l:pos)
     return l:ret
 endfunction
 
-cnoremap <C-K> <C-\>e<SID>KillLine()<CR>
 function! <SID>KillLine()
-    call <SID>saveUndoHistory(getcmdline(), getcmdpos())
+    call <SID>SaveUndoHistory(getcmdline(), getcmdpos())
     let l:cmd = getcmdline()
     let l:rem = strpart(l:cmd, getcmdpos() - 1)
-    if ('' != l:rem)
+    if '' != l:rem
         let @c = l:rem
     endif
     let l:ret = strpart(l:cmd, 0, getcmdpos() - 1)
-    call <SID>saveUndoHistory(l:ret, getcmdpos())
+    call <SID>SaveUndoHistory(l:ret, getcmdpos())
     return l:ret
 endfunction
 
-cnoremap <C-U> <C-\>e<SID>BackwardKillLine()<CR>
 function! <SID>BackwardKillLine()
-    call <SID>saveUndoHistory(getcmdline(), getcmdpos())
+    call <SID>SaveUndoHistory(getcmdline(), getcmdpos())
     let l:cmd = getcmdline()
     let l:rem = strpart(l:cmd, 0, getcmdpos() - 1)
-    if ('' != l:rem)
+    if '' != l:rem
         let @c = l:rem
     endif
     let l:ret = strpart(l:cmd, getcmdpos() - 1)
-    call <SID>saveUndoHistory(l:ret, 1)
+    call <SID>SaveUndoHistory(l:ret, 1)
     call setcmdpos(1)
     return l:ret
 endfunction
 
-cnoremap <Esc>d <C-\>e<SID>KillWord()<CR>
-cmap <M-D> <Esc>d
 function! <SID>KillWord()
-    call <SID>saveUndoHistory(getcmdline(), getcmdpos())
+    call <SID>SaveUndoHistory(getcmdline(), getcmdpos())
     let l:loc = strpart(getcmdline(), 0, getcmdpos() - 1)
     let l:roc = strpart(getcmdline(), getcmdpos() - 1)
-    if (l:roc =~ '\v^\s*\w')
-        let l:rem = matchstr(l:roc, '\v^\s*\w+')
-    elseif (l:roc =~ '\v^\s*[^[:alnum:]_[:blank:]]')
+    if l:roc =~ '\v^\s*[' . g:EmacsCommandLineWordCharCharacterClass . ']'
+        let l:rem = matchstr(l:roc, '\v^\s*[' . g:EmacsCommandLineWordCharCharacterClass . ']+')
+    elseif l:roc =~ '\v^\s*[^[:alnum:]_[:blank:]]'
         let l:rem = matchstr(l:roc, '\v^\s*[^[:alnum:]_[:blank:]]+')
-    elseif (l:roc =~ '\v^\s+$')
+    elseif l:roc =~ '\v^\s+$'
         let @c = l:roc
         return l:loc
     else
@@ -138,18 +185,17 @@ function! <SID>KillWord()
     endif
     let @c = l:rem
     let l:ret = l:loc . strpart(l:roc, strlen(l:rem))
-    call <SID>saveUndoHistory(l:ret, getcmdpos())
+    call <SID>SaveUndoHistory(l:ret, getcmdpos())
     return l:ret
 endfunction
 
-cnoremap <C-W> <C-\>e<SID>DeleteBackwardsToWhiteSpace()<CR>
 function! <SID>DeleteBackwardsToWhiteSpace()
-    call <SID>saveUndoHistory(getcmdline(), getcmdpos())
+    call <SID>SaveUndoHistory(getcmdline(), getcmdpos())
     let l:loc = strpart(getcmdline(), 0, getcmdpos() - 1)
     let l:roc = strpart(getcmdline(), getcmdpos() - 1)
-    if (l:loc =~ '\v\S\s*$')
+    if l:loc =~ '\v\S\s*$'
         let l:rem = matchstr(l:loc, '\v\S+\s*$')
-    elseif (l:loc =~ '\v^\s+$')
+    elseif l:loc =~ '\v^\s+$'
         let @c = l:loc
         call setcmdpos(1)
         return l:roc
@@ -159,23 +205,21 @@ function! <SID>DeleteBackwardsToWhiteSpace()
     let @c = l:rem
     let l:pos = getcmdpos() - strlen(l:rem)
     let l:ret = strpart(l:loc, 0, strlen(l:loc) - strlen(l:rem)) . l:roc
-    call <SID>saveUndoHistory(l:ret, l:pos)
+    call <SID>SaveUndoHistory(l:ret, l:pos)
     call setcmdpos(l:pos)
     return l:ret
 endfunction
 
-cnoremap <Esc><BS> <C-\>e<SID>BackwardKillWord()<CR>
-cmap <M-BS> <Esc><BS>
 function! <SID>BackwardKillWord()
     " Do same as in-built Ctrl-W, except assign deleted text to @c
-    call <SID>saveUndoHistory(getcmdline(), getcmdpos())
+    call <SID>SaveUndoHistory(getcmdline(), getcmdpos())
     let l:loc = strpart(getcmdline(), 0, getcmdpos() - 1)
     let l:roc = strpart(getcmdline(), getcmdpos() - 1)
-    if (l:loc =~ '\v\w\s*$')
-        let l:rem = matchstr(l:loc, '\v\w+\s*$')
-    elseif (l:loc =~ '\v[^[:alnum:]_[:blank:]]\s*$')
+    if l:loc =~ '\v[' . g:EmacsCommandLineWordCharCharacterClass . ']\s*$'
+        let l:rem = matchstr(l:loc, '\v[' . g:EmacsCommandLineWordCharCharacterClass . ']+\s*$')
+    elseif l:loc =~ '\v[^[:alnum:]_[:blank:]]\s*$'
         let l:rem = matchstr(l:loc, '\v[^[:alnum:]_[:blank:]]+\s*$')
-    elseif (l:loc =~ '\v^\s+$')
+    elseif l:loc =~ '\v^\s+$'
         let @c = l:loc
         call setcmdpos(1)
         return l:roc
@@ -185,12 +229,45 @@ function! <SID>BackwardKillWord()
     let @c = l:rem
     let l:pos = getcmdpos() - strlen(l:rem)
     let l:ret = strpart(l:loc, 0, strlen(l:loc) - strlen(l:rem)) . l:roc
-    call <SID>saveUndoHistory(l:ret, l:pos)
+    call <SID>SaveUndoHistory(l:ret, l:pos)
     call setcmdpos(l:pos)
     return l:ret
 endfunction
 
-cnoremap <C-Y> <C-\>e<SID>Yank()<CR>
+function! <SID>TransposeChar()
+    call <SID>SaveUndoHistory(getcmdline(), getcmdpos())
+    let l:pos = getcmdpos() + strlen(matchstr(strpart(getcmdline(), getcmdpos() - 1), '^.' . (getcmdpos() < 2 ? '.' : '')))
+    let l:ret = substitute(strpart(getcmdline(), 0, l:pos - 1), '\v(.*)(.)(.)$', '\1\3\2', '') . strpart(getcmdline(), l:pos - 1)
+    call <SID>SaveUndoHistory(l:ret, l:pos)
+    call setcmdpos(l:pos)
+    return l:ret
+endfunction
+
+function! <SID>TransposeWord()
+    let l:loc = strpart(getcmdline(), 0, getcmdpos() - 1) . matchstr(strpart(getcmdline(), getcmdpos() - 1), '^.')
+    let l:roc = strpart(getcmdline(), strlen(l:loc))
+    if l:loc !~ '\v^\s*\S+\s')
+        return getcmdline()
+    endi
+    if l:loc =~ '\s$'
+        if l:roc =~ '^\s*\S'
+            let l:loc = l:loc . matchstr(l:roc, '\v^\s*\S+')
+            let l:roc = strpart(getcmdline(), strlen(l:loc))
+        elseif l:roc =~ '^\s*$'
+            let l:roc = matchstr(l:loc, '\v\s+$') . l:roc
+            let l:loc = strpart(getcmdline(), 0, strlen(getcmdline()) - strlen(l:roc))
+        endif
+    elseif l:loc =~ '\S$' && l:roc =~ '^\S'
+        let l:loc = l:loc . matchstr(l:roc, '\v^\S+')
+        let l:roc = strpart(getcmdline(), strlen(l:loc))
+    endif
+    let l:pos = strlen(l:loc) + 1
+    let l:ret = substitute(l:loc, '\v^(.{-})(\S+)(\s+)(\S+)(\s*)$', '\1\4\3\2\5', '') . l:roc
+    call <SID>SaveUndoHistory(l:ret, l:pos)
+    call setcmdpos(l:pos)
+    return l:ret
+endfunction
+
 function! <SID>Yank()
     let l:cmd = getcmdline()
     call setcmdpos(getcmdpos() + strlen(@c))
@@ -199,34 +276,37 @@ endfunction
 
 cnoremap <C-Z> <C-\>e<SID>ToggleExternalCommand()<CR>
 function! <SID>ToggleExternalCommand()
+    call <SID>SaveUndoHistory(getcmdline(), getcmdpos())
     let l:cmd = getcmdline()
-    if ('!' == strpart(l:cmd, 0, 1))
-        call setcmdpos(getcmdpos() - 1)
-        return strpart(l:cmd, 1)
+    if '!' == strpart(l:cmd, 0, 1)
+        let l:pos = getcmdpos() - 1
+        let l:ret = strpart(l:cmd, 1)
     else
-        call setcmdpos(getcmdpos() + 1)
-        return '!' . l:cmd
+        let l:pos = getcmdpos() + 1
+        let l:ret = '!' . l:cmd
     endif
+    call <SID>SaveUndoHistory(l:ret, l:pos)
+    call setcmdpos(l:pos)
+    return l:ret
 endfunction
 
 let s:oldcmdline = [ ]
-function! <SID>saveUndoHistory(cmdline, cmdpos)
+function! <SID>SaveUndoHistory(cmdline, cmdpos)
     if len(s:oldcmdline) == 0 || a:cmdline != s:oldcmdline[0][0]
         call insert(s:oldcmdline, [ a:cmdline, a:cmdpos ], 0)
     else
         let s:oldcmdline[0][1] = a:cmdpos
     endif
-    if len(s:oldcmdline) > 100
-        call remove(s:oldcmdline, 100)
+    if len(s:oldcmdline) > g:EmacsCommandLineMaxUndoHistory
+        call remove(s:oldcmdline, g:EmacsCommandLineMaxUndoHistory)
     endif
 endfunction
-cnoremap <C-_> <C-\>e<SID>Undo()<CR>
-cmap <C-X><C-U> <C-_>
+
 function! <SID>Undo()
     if len(s:oldcmdline) == 0
         return getcmdline()
     endif
-    if getcmdline() == s:oldcmdline[0][0]
+    if getcmdline() ==# s:oldcmdline[0][0]
         call remove(s:oldcmdline, 0)
         if len(s:oldcmdline) == 0
             return getcmdline()
@@ -237,4 +317,102 @@ function! <SID>Undo()
     call remove(s:oldcmdline, 0)
     return l:ret
 endfunction
+
+let s:yanklastargno = -1
+let s:yanklastargloc = ''
+let s:yanklastargroc = ''
+let s:yanklastargres = ''
+let s:yanklastargcmdpos = 0
+let s:argregex = '\v.{-}(\s|^)("([^"]+|\\.)*"|''([^'']+|'''')*''|(\S+|\\\s)*)\s*$'
+function! <SID>YankLastArg()
+    if histnr('cmd') < 1
+        return getcmdline()
+    endif
+    if s:yanklastargno < 1 ||
+     \ getcmdline() != s:yanklastargloc . s:yanklastargres . s:yanklastargroc ||
+     \ getcmdpos() != s:yanklastargcmdpos + strlen(s:yanklastargres)
+        let s:yanklastargno = histnr('cmd')
+        let s:yanklastargloc = strpart(getcmdline(), 0, getcmdpos() - 1)
+        let s:yanklastargroc = strpart(getcmdline(), getcmdpos() - 1)
+        let s:yanklastargres = ''
+        let s:yanklastargcmdpos = getcmdpos()
+    else
+        let s:yanklastargno -= 1
+    endif
+    while 0 < s:yanklastargno &&
+        \ ( histget('cmd', s:yanklastargno) !~ '\S' ||
+        \   substitute(histget('cmd', s:yanklastargno), s:argregex, '\2', '') ==# s:yanklastargres
+        \   )
+        let s:yanklastargno = s:yanklastargno - 1
+    endwhile
+    if s:yanklastargno < 1
+        return s:yanklastargloc . s:yanklastargroc
+    endif
+    let s:yanklastargres = substitute(histget('cmd', s:yanklastargno), s:argregex, '\2', '')
+    call setcmdpos(s:yanklastargcmdpos + strlen(s:yanklastargres))
+    return s:yanklastargloc . s:yanklastargres . s:yanklastargroc
+endfunction
+
+let s:functions = {
+  \ 'ForwardWord':                 '<M-f>',
+  \ 'BackwardWord':                '<M-b>',
+  \ 'DeleteChar':                  ['<Del>', '<C-D>'],
+  \ 'BackwardDeleteChar':          ['<BS>', '<C-H>'],
+  \ 'KillLine':                    '<C-K>',
+  \ 'BackwardKillLine':            '<C-U>',
+  \ 'KillWord':                    '<M-d>',
+  \ 'DeleteBackwardsToWhiteSpace': '<C-W>',
+  \ 'BackwardKillWord':            '<M-BS>',
+  \ 'TransposeChar':               '<C-T>',
+  \ 'TransposeWord':               '<M-t>',
+  \ 'Yank':                        '<C-Y>',
+  \ 'Undo':                        ['<C-_>', '<C-X><C-U>'],
+  \ 'YankLastArg':                 ['<M-.>', '<M-_>'],
+  \ 'ToggleExternalCommand':       '<C-Z>'
+  \ }
+if !has('gui_running') && !has('nvim')
+    let s:functions['ForwardWord']      = '<Esc>f'
+    let s:functions['BackwardWord']     = '<Esc>b'
+    let s:functions['KillWord']         = '<Esc>d'
+    let s:functions['BackwardKillWord'] = '<Esc><BS>'
+    let s:functions['TransposeWord']    = '<Esc>t'
+    let s:functions['YankLastArg']      = ['<Esc>.', '<Esc>_']
+endif
+for s:key in keys(s:functions)
+    if !exists('g:EmacsCommandLine' . s:key . 'Disable') || g:EmacsCommandLine{s:key}Disable != 1
+        let s:{s:key}MapDefined = exists('g:EmacsCommandLine' . s:key . 'Map')
+        if !s:{s:key}MapDefined
+            let g:EmacsCommandLine{s:key}Map = s:functions[s:key]
+        endif
+        if type(g:EmacsCommandLine{s:key}Map) == 3
+            for s:mapping in g:EmacsCommandLine{s:key}Map
+                if exists('g:EmacsCommandLine' . s:key . 'MapOnlyWhenEmpty') && g:EmacsCommandLine{s:key}MapOnlyWhenEmpty == 1
+                    exe 'cnoremap <expr> ' . s:mapping . ' ' .
+                      \ 'strlen(getcmdline())>0?''' . s:mapping . ''':''<C-\>e<SID>' . s:key . '()<CR>'''
+                elseif exists('g:EmacsCommandLine' . s:key . 'NoMapAtEnd') && g:EmacsCommandLine{s:key}NoMapAtEnd == 1
+                    exe 'cnoremap <expr> ' . s:mapping . ' ' .
+                      \ 'getcmdpos()>strlen(getcmdline())?''' . s:mapping . ''':''<C-\>e<SID>' . s:key . '()<CR>'''
+                else
+                    exe 'cnoremap ' . s:mapping . ' <C-\>e<SID>' . s:key . '()<CR>'
+                endif
+                if maparg(g:EmacsCommandLineOldMapPrefix . s:mapping, 'c') == ''
+                    exe 'cnoremap ' . g:EmacsCommandLineOldMapPrefix . s:mapping . ' ' . s:mapping
+                endif
+            endfor
+        else
+            if exists('g:EmacsCommandLine' . s:key . 'MapOnlyWhenEmpty') && g:EmacsCommandLine{s:key}MapOnlyWhenEmpty == 1
+                exe 'cnoremap <expr> ' . g:EmacsCommandLine{s:key}Map . ' ' .
+                  \ 'strlen(getcmdline())>0?''' . g:EmacsCommandLine{s:key}Map . ''':''<C-\>e<SID>' . s:key . '()<CR>'''
+            elseif exists('g:EmacsCommandLine' . s:key . 'NoMapAtEnd') && g:EmacsCommandLine{s:key}NoMapAtEnd == 1
+                exe 'cnoremap <expr> ' . g:EmacsCommandLine{s:key}Map . ' ' .
+                  \ 'getcmdpos()>strlen(getcmdline())?''' . g:EmacsCommandLine{s:key}Map . ''':''<C-\>e<SID>' . s:key . '()<CR>'''
+            else
+                exe 'cnoremap ' . g:EmacsCommandLine{s:key}Map . ' <C-\>e<SID>' . s:key . '()<CR>'
+            endif
+            if maparg(g:EmacsCommandLineOldMapPrefix . g:EmacsCommandLine{s:key}Map, 'c') == ''
+                exe 'cnoremap ' . g:EmacsCommandLineOldMapPrefix . g:EmacsCommandLine{s:key}Map . ' ' . g:EmacsCommandLine{s:key}Map
+            endif
+        endif
+    endif
+endfor
 

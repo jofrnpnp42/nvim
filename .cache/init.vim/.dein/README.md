@@ -1,143 +1,87 @@
-Neosnippet
-==========
 
-The Neosnippet plug-In adds snippet support to Vim. Snippets are
-small templates for commonly used code that you can fill in on the
-fly. To use snippets can increase your productivity in Vim a lot.
-The functionality of this plug-in is quite similar to plug-ins like
-snipMate.vim or snippetsEmu.vim. But since you can choose snippets with the
-[neocomplcache](https://github.com/Shougo/neocomplcache.vim) /
-[neocomplete](https://github.com/Shougo/neocomplete.vim) interface, you might
-have less trouble using them, because you do not have to remember each snippet
-name.
+Neovim client library and GUI, in Qt5.
 
-Installation
-------------
+[![Build Status](https://semaphoreci.com/api/v1/projects/1ca75720-56a2-4573-883b-f90fd6241327/414035/badge.svg)](https://semaphoreci.com/equalsraf/neovim-qt)
+[![Build status](https://ci.appveyor.com/api/projects/status/c252f54mfjcuud8x/branch/master?svg=true)](https://ci.appveyor.com/project/equalsraf/neovim-qt/branch/master)
+[![Build Status](https://travis-ci.org/equalsraf/neovim-qt.svg?branch=master)](https://travis-ci.org/equalsraf/neovim-qt)
+[![Coverage Status](https://coveralls.io/repos/equalsraf/neovim-qt/badge.svg?branch=tb-refactor)](https://coveralls.io/r/equalsraf/neovim-qt)
+[![Downloads](https://img.shields.io/github/downloads/equalsraf/neovim-qt/total.svg?maxAge=2592000)](https://github.com/equalsraf/neovim-qt/releases)
 
-To install neosnippet and other Vim plug-ins it is recommended to use one of the
-popular package managers for Vim, rather than installing by drag and drop all
-required files into your `.vim` folder.
+## Requirements
 
-Notes:
+* Qt5
+* Neovim
 
-* Vim 7.4 or above is needed.
+## Building
 
-* Default snippets files are available in:
-  [neosnippet-snippets](https://github.com/Shougo/neosnippet-snippets)
-* Installing default snippets is optional. If choose not to install them,
-  you must deactivate them with `g:neosnippet#disable_runtime_snippets`.
-* neocomplcache/neocomplete is not required to use neosnippet, but it's highly recommended.
-* Extra snippets files can be found in:
-  [vim-snippets](https://github.com/honza/vim-snippets).
+You can build using CMake and your build system of choice. It should build in any
+system where Qt5 and Msgpack can build.
 
-### Manual (not recommended)
+For Unix call
 
-1. Install the
-   [neocomplcache](https://github.com/Shougo/neocomplcache.vim)/
-   [neocomplete](https://github.com/Shougo/neocomplete.vim) and
-   [neosnippet-snippets](https://github.com/Shougo/neosnippet-snippets)
-   first.
-2. Put files in your Vim directory (usually `~/.vim/` or
-   `%PROGRAMFILES%/Vim/vimfiles` on Windows).
+    $ mkdir build
+    $ cd build
+    $ cmake -DCMAKE_BUILD_TYPE=Release ..
+    $ make
 
-### Vundle
+for Windows both MSVC and Mingw are supported. Use the following
 
-1. Setup the [vundle](https://github.com/gmarik/vundle) package manager
-2. Set the bundles for [neocomplcache](https://github.com/Shougo/neocomplcache)
-   or [neocomplete](https://github.com/Shougo/neocomplete.vim)
-   And [neosnippet](https://github.com/Shougo/neosnippet)
-   And [neosnippet-snippets](https://github.com/Shougo/neosnippet-snippets)
+    $ mkdir build
+    $ cd build
+    $ cmake -DCMAKE_BUILD_TYPE=Release ..
+    $ cmake --build .
 
-    ```vim
-    Plugin 'Shougo/neocomplcache'
-    or
-    Plugin 'Shougo/neocomplete'
+For MSVC build you may have to specify the VS version and build type. Always make sure the VS versions matches your Qt libraries.
 
-    Plugin 'Shougo/neosnippet'
-    Plugin 'Shougo/neosnippet-snippets'
-    ```
+	$ mkdir build
+	$ cd build
+	$ cmake -G "Visual Studio 14" -DCMAKE_BUILD_TYPE=Release ..
+	$ cmake --build . --config Release --target install
 
-3. Open up Vim and start installation with `:PluginInstall`
+The binaries will be under build/bin/. The GUI binary is called nvim-qt. Run make install to install it, or execute from the source setting the environment variable NVIM_QT_RUNTIME as the path holding the GUI shim plugin
 
-### Neobundle
+	$ NVIM_QT_RUNTIME_PATH=../src/gui/runtime bin/nvim-qt
 
-1. Setup the [neobundle](https://github.com/Shougo/neobundle.vim) package manager
-2. Set the bundles for [neocomplcache](https://github.com/Shougo/neocomplcache)
-   or [neocomplete](https://github.com/Shougo/neocomplete.vim)
-   And [neosnippet](https://github.com/Shougo/neosnippet)
-   And [neosnippet-snippets](https://github.com/Shougo/neosnippet-snippets)
+## Using the GUI
 
-    ```vim
-    NeoBundle 'Shougo/neocomplcache'
-    or
-    NeoBundle 'Shougo/neocomplete'
+Run **nvim-qt**, the **nvim** binary must be in your $PATH. Check `nvim-qt --help` for additional options.
 
-    NeoBundle 'Shougo/neosnippet'
-    NeoBundle 'Shougo/neosnippet-snippets'
-    ```
+Commands for interacting with the GUI are regular commands, available in the documentation [:help nvim-gui-shim](./src/gui/runtime/doc/nvim_gui_shim.txt). For example to change the font call
 
-3. Open up Vim and start installation with `:NeoBundleInstall`
+	:Guifont DejaVu Sans Mono:h13
 
-### VAM (vim-addon-manager)
+You can set GUI options on startup, in the GUI configuration file (:help ginit.vim).
 
-1. Setup the [vim-addon-manager](https://github.com/MarcWeber/vim-addon-manager)
-   package manager.
-2. Add `neosnippet` to the list of addons in your vimrc:
+## Development
 
-    ```vim
-    call vam#ActivateAddons(['neosnippet', 'neosnippet-snippets'])
-    ```
+The *NeovimConnector* class is used to setup the connection to Neovim. It also
+provides you with low level methods for RPC - in general you should be using
+the signals/slots in the QObject returned by NeovimConnector::neovimObject()
 
-    . Installation will start automatically when you open vim next time.
+1. To call a function call the corresponding slot
+2. The result of the call is delivered by the corresponding signal,
+   by convention these signals are named 'on\_' + slot\_name
+3. The Neovim() class is automagically generated from the Neovim
+   metadata
+5. For Neovim functions that take the **Object** type we use **QVariant**
+6. To catch Neovim Notifications connect to the Neovim::neovimNotification
+   signal
 
-Configuration
--------------
+### To Update the RPC bindings
 
-This is an example `~/.vimrc` configuration for Neosnippet. It is assumed you
-already have Neocomplcache configured. With the settings of the example, you
-can use the following keys:
+Part of the code is auto-generated by calling Neovim to get the API metadata,
+and generating C++ code. This is done using a python script
+(generate\_bindings.py) if you just want to use neovim-qt as is you don't need
+to worry about this, I already include the generated code in the repository.
 
-* `C-k` to select-and-expand a snippet from the Neocomplcache popup (Use `C-n`
-  and `C-p` to select it). `C-k` can also be used to jump to the next field in
-  the snippet.
-* `Tab` to select the next field to fill in the snippet.
+The bindings source templates are stored under the bindings/ folder the 
+generated code is in src/auto/.
 
-```vim
-" Plugin key-mappings.
-" Note: It must be "imap" and "smap".  It uses <Plug> mappings.
-imap <C-k>     <Plug>(neosnippet_expand_or_jump)
-smap <C-k>     <Plug>(neosnippet_expand_or_jump)
-xmap <C-k>     <Plug>(neosnippet_expand_target)
+To generate the bindings yourself you need
 
-" SuperTab like snippets behavior.
-" Note: It must be "imap" and "smap".  It uses <Plug> mappings.
-imap <C-k>     <Plug>(neosnippet_expand_or_jump)
-"imap <expr><TAB>
-" \ pumvisible() ? "\<C-n>" :
-" \ neosnippet#expandable_or_jumpable() ?
-" \    "\<Plug>(neosnippet_expand_or_jump)" : "\<TAB>"
-smap <expr><TAB> neosnippet#expandable_or_jumpable() ?
-\ "\<Plug>(neosnippet_expand_or_jump)" : "\<TAB>"
+- python
+- python-msgpack
+- jinja2
 
-" For conceal markers.
-if has('conceal')
-  set conceallevel=2 concealcursor=niv
-endif
-```
-
-If you want to use a different collection of snippets than the
-built-in ones, then you can set a path to the snippets with
-the `g:neosnippet#snippets_directory` variable (e.g [Honza's
-Snippets](https://github.com/honza/vim-snippets))
-
-But if you enable `g:neosnippet#enable_snipmate_compatibility`, neosnippet will
-load snipMate snippets from runtime path automatically.
-
-```vim
-" Enable snipMate compatibility feature.
-let g:neosnippet#enable_snipmate_compatibility = 1
-
-" Tell Neosnippet about the other snippets
-let g:neosnippet#snippets_directory='~/.vim/bundle/vim-snippets/snippets'
-```
+Just run `make bindings` in Unix or the equivalent build command in Windows.
 

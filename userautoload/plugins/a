@@ -1,0 +1,1100 @@
+<span style="font-size: 150%"><b>Neovim のプラグイン導入を行う</b></span>
+- Ubuntu 17.04 環境(x86_64)、18.04 環境で確認済。
+- $HOME/.config/nvim/userautoload/plugins/ 以下の私独自設定のファイルを読み込むようにしている。
+- Neovim のインストール 〜 基本設定については、[http://www.nekochango.com/entry/linux/nvim/setup:title=こちら]を参照。
+　　
+[:contents]
+ 　
+* 1. dein.vim のインストール
+まずは Neovim のプラグイン管理である dein  をインストールする。
+[https://github.com/Shougo/dein.vim:title] に記載されている通り, installer.sh の実行、および $HOME/.config/nvim/init.vim への dein 用の記述を行う。
+>||
+% cd /tmp/
+% curl https://raw.githubusercontent.com/Shougo/dein.vim/master/bin/installer.sh > installer.sh
+||<
+　
+NeoVim の設定ファイル置き場を指定して実行する。このとき「~/.config/nvim<span style="color: #ff0000"><span style="font-size: 150%">/</span></span>」といったように末尾に「/」を付けない方が無難かと思う。
+>||
+% sh ./installer.sh  ~/.config/nvim
+||<
+　
+* 2. $HOME/.config/nvim/init.vim の設定
+-- Vimfiler の設定で躓いたが、[https://muunyblue.github.io/c95d62c68196b2d0c1c1de8c7eeb6d50.html#vimfiler:title=こちらのサイト]が大変役立ち助かった。
+
+<b>$HOME/.config/nvim/init.vim</b>
+>|vim|
+"---------------------------------
+"[start]   Neko 基本的な設定
+"---------------------------------
+"
+"{{{
+""------------------------------------------------------------------------
+" ウインドウの設定
+"------------------------------------------------------------------------
+set guicursor=a:blinkon0    " カーソルの点滅なし
+set linespace=1             " 行間隔
+set columns=180             " ウインドウ幅
+set lines=57                " ウインドウ高
+set cmdheight=2             " コマンドライン幅
+if has("gui")
+    winpos  200  10         " ウインドウ位置
+endif
+set guioptions-=T           " ツールバー消去
+set guioptions-=m           " メニューバー非表示
+set display=lastline        " 長い行を省略せずに表示する
+set pumheight=10            " 補完リストの高さ
+set number
+set laststatus=2            " Powerline のため
+"set notitle                 " タイトルなし
+"set shortmess+=I            " タイトルなし
+
+"------------------------------------------------------------------------
+" カラースキーム
+"------------------------------------------------------------------------
+if has("gui")
+    autocmd FocusGained * set transparency=100   " Ubuntu 17.04 で nvim-qt から起動させたが、透けなかった。
+endif
+colorscheme phd
+
+"------------------------------------------------------------------------
+" 編集に関する設定
+"------------------------------------------------------------------------
+set ambiwidth=double                    " 2バイト文字でカーソル位置がずれる問題の対策
+set iminsert=0 imsearch=0               " 挿入モード・検索モードでのデフォルトのIME状態設定
+set expandtab                           " タブ入力時に自動的にスペースに変える
+set tabstop=4                           " 1タブの幅
+set softtabstop=4                       " 1タブ当たりの半角スペースの個数 (通常入力時)
+set shiftwidth=4                        " 1タブ当たりの半角スペースの個数 (コマンドや自動インデント)
+"set clipboard=unnamed                   " xterm への S-Insert でのペーストOKだが、firefox にペーストできない (ginit.vim あり)
+"set clipboard+=unnamed                  " 同上
+"set clipboard=unnamedplus               " firefox などに S-Insert でペーストできるが, xterm へのペーストができない (ginit.vim あり)
+set clipboard=unnamed,unnamedplus       " firefox, xterm への S-Insert でのペーストが出来た (ginit.vim あり)
+
+set autoindent                          " 自動的にインデントする (noautoindent:インデントしない)
+set backspace=indent,eol,start          " バックスペースでインデントや改行を削除できるようにする
+set showmatch matchtime=1               " 入力時対応する括弧に飛ぶ。表示時間 ＝ 0.1 * matchtime (秒)
+set autoindent                          " 自動的にインデントする (noautoindent:インデントしない)
+set backspace=indent,eol,start          " バックスペースでインデントや改行を削除できるようにする
+set showmatch matchtime=1               " 入力時対応する括弧に飛ぶ。表示時間 ＝ 0.1 * matchtime (秒)
+set wildmenu                            " コマンドライン補完するときに強化されたものを使う(参照 :help wildmenu)
+set nobackup                            " バックアップファイルを作成しない
+"set noundofile                          " undoファイル (*.un~) を作成しない
+set undodir=$HOME/.config/nvim/undo
+nnoremap Y y$                           " Y を y$ と同じにする。(ノーマルモード・再割り当て無し) 
+set scrolloff=5                         " スクロールする時に下が見えるようにする
+set wildmenu                            " コマンドライン補完するときに強化されたものを使う
+" , の後に自動的にスペースを入れる
+" inoremap , ,<Space>
+" 文字が無い部分でも矩形選択を可能にする
+set virtualedit=block
+
+augroup grlcd                           "ファイルを開くと、ファイルがあるディレクトリに移動する
+    autocmd!
+    autocmd BufEnter * lcd %:p:h
+augroup END
+
+if 1    " 4-6. yank した文字列とカーソル位置の単語を置換する
+    nnoremap    <silent> cy   ce<C-r>0<ESC>:let@=/=@1<CR>:noh<CR>
+    vnoremap    <silent> cy   ce<C-r>0<ESC>:let@=/=@1<CR>:noh<CR>
+    nnoremap    <silent> ciy  ciw<C-r>0<ESC>:let@=/=@1<CR>:noh<CR>
+endif
+"------------------------------------------------------------------------
+" 検索に関する設定
+"------------------------------------------------------------------------
+set incsearch                               " 一致したもの全てハイライトする
+" 4-16. Esc 2回でハイライトを消す
+nnoremap <ESC><ESC> :nohlsearch<CR>
+set ignorecase                              " 検索時に大文字小文字を無視 (noignorecase:無視しない)
+set smartcase                               " 大文字小文字の両方が含まれている場合は大文字小文字を区別
+set wrapscan                                " 検索時にファイルの最後まで行ったら最初に戻る (nowrapscan:戻らない)
+" 検索した後に移動しない
+nnoremap * *N
+nnoremap # #N
+
+augroup grepopen                            " vimgrep 実行後に自動的に copen して QuickFix ウインドウを開く。
+    autocmd!
+    autocmd QuickfixCmdPost vimgrep cw
+augroup END
+
+
+"------------------------------------------------------------------------
+" マウス設定
+"------------------------------------------------------------------------
+set mouse=a       " どのモードでもマウスを使えるようにする
+set nomousefocus  " マウスの移動でフォーカスを自動的に切替えない (mousefocus:切替る)
+set mousehide     " 入力時にマウスポインタを隠す (nomousehide:隠さない)
+set guioptions+=a " ビジュアル選択(D&D他)を自動的にクリップボードへ (:help guioptions_a)
+
+
+"------------------------------------------------------------------------
+" diffopt 設定
+"------------------------------------------------------------------------
+" diffモードでの操作
+"   [c → 次の違いがある場所にジャンプ
+"   ]c → 前の違いがある場所にジャンプ
+"   do → 今開いているバッファに別バッファの差分を取り込む (:diffget)
+"   dp → 別バッファに今開いているバッファの差分を入れる   (:diffput)
+"
+"   http://qiita.com/purini-to/items/1209e467eb9ca73e529b
+if has("gui")
+    " カレント行ハイライトON
+    " 横方向。ただし Ubuntu 17.04 の nvim-qt はハイライトになるが、nvim では下線になるので注意。
+    set cursorline
+endif
+" アンダーラインを引く(color terminal)
+"highlight CursorLine cterm=underline ctermfg=NONE ctermbg=NONE
+" アンダーラインを引く(gui)
+"highlight CursorLine gui=underline guifg=NONE guibg=NONE
+set diffopt+=filler     " 差分が無い箇所を '-' で埋めない
+set diffopt+=icase      " 大小文字の違いは無視する
+set diffopt+=iwhite     " 半角スペースの個数の違いは無視する
+set diffopt+=vertical
+nnoremap <C-c><C-c> ]c
+nnoremap <C-c><C-k> [c
+nnoremap <Leader>df :<C-u>diffsplit %
+nnoremap <Leader>do :<C-u>diffsplit %.orig <CR>
+"}}}
+"---------------------------------
+"[end]     Neko 基本的な設定
+"---------------------------------
+
+"dein Scripts-----------------------------
+if &compatible
+  set nocompatible               " Be iMproved
+endif
+
+
+" Required:
+set runtimepath+=/home/neko/.config/nvim/repos/github.com/Shougo/dein.vim
+
+" Required:
+if dein#load_state('/home/neko/.config/nvim/')
+  call dein#begin('/home/neko/.config/nvim/')
+
+  " Let dein manage dein
+  " Required:
+  call dein#add('/home/neko/.config/nvim/repos/github.com/Shougo/dein.vim')
+
+  " Add or remove your plugins here:
+  call dein#add('Shougo/neosnippet.vim')
+  call dein#add('Shougo/neosnippet-snippets')
+
+  " You can specify revision/branch/tag.
+  call dein#add('Shougo/vimshell', { 'rev': '3787e5' })
+
+  "------------------------------
+  "[start]  Neko dein によるプラグイン管理
+  "------------------------------
+  call dein#add('Shougo/vimproc')
+  call dein#add('Shougo/neocomplcache.vim')  " NeoComlcache
+  call dein#add('equalsraf/neovim-qt')
+  call dein#add('Shougo/unite.vim')
+  call dein#add('Shougo/vimfiler.vim')
+  call dein#add('Shougo/neomru.vim')
+  call dein#add('Shougo/vinarise.vim')     " バイナリファイル編集"
+  call dein#add('AndrewRadev/linediff.vim') "行範囲のdiff
+  call dein#add('LeafCage/yankround.vim')  " ヤンクバッファ
+  call dein#add('junegunn/vim-easy-align')   " コードの自動整形
+  call dein#add('Lokaltog/vim-easymotion')   " 高速移動
+  call dein#add('nathanaelkane/vim-indent-guides')   " インデントガイド
+  call dein#add('Yggdroot/indentLine')   " インデントライン
+  call dein#add('itchyny/thumbnail.vim') " バッファセレクタ
+  call dein#add('yonchu/accelerated-smooth-scroll') " 加速バッファセレクタ
+  call dein#add('itchyny/lightline.vim')
+  call dein#add('tyru/open-browser.vim')
+  call dein#add('tyru/capture.vim') " コマンドの結果をキャプチャする (例) :Capture map
+  call dein#add('fuenor/qfixgrep')
+  call dein#add('thinca/vim-qfreplace')
+  call dein#add('AndrewRadev/linediff.vim')
+  call dein#add('houtsnip/vim-emacscommandline')  " コマンドラインで emacs 操作をする
+  call dein#add('AndrewRadev/linediff.vim')
+  call dein#add('tpope/vim-surround') "surround
+  call dein#add('tpope/vim-repeat') "repeat surround
+
+  "[ref] http://wakame.hatenablog.jp/entry/2016/10/09/174035
+  "[ref] http://wakame.hatenablog.jp/entry/2017/05/04/144550
+  " call dein#load_toml('~/.config/nvim/userautoload/dein/plugins.toml', {'lazy': 0})
+  " call dein#load_toml('~/.config/nvim/userautoload/dein/plugins-lazy.toml', {'lazy': 1})
+
+  "------------------------------
+  "[end]    Neko dein によるプラグイン管理
+  "------------------------------
+  
+  " Required:
+  call dein#end()
+  call dein#save_state()
+endif
+
+" Required:
+filetype plugin indent on
+syntax enable
+
+" If you want to install not installed plugins on startup.
+if dein#check_install()
+  call dein#install()
+endif
+
+"---------------------------------
+"[start]   Neko プラグインインストール後の設定
+"---------------------------------
+let my_plugin_list = [
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_neocomplcache.vim"      ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_easyalign.vim"          ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugins-unite.vim"             ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_indentguides.vim"       ,
+\ "$HOME/.config/nvim/userautoload/plugins/local_keymap.vim"              ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_yankround.vim"          ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_easymotion.vim"         ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_thumbnail.vim"          ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_textmanip.vim"          ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_lightline.vim"          ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_vim_open_browser.vim"   ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_qfixgrep.vim" ,
+\ "$HOME/.config/nvim/userautoload/plugins/plugin_vimfiler.vim"
+\ ]
+
+let i = 0
+while i < len(my_plugin_list)
+    let f = my_plugin_list[i]
+    if filereadable(expand(f))
+        source `=f`
+    endif
+    let i = i + 1
+endwhile
+
+"{{{
+" ---------------------------------------------------------------
+" easyalign の使い方メモ
+" ---------------------------------------------------------------
+" コードの自動整形 (ビジュアルモードで範囲選択 → Enter → * → =)
+" http://baqamore.hatenablog.com/entry/2015/06/27/074459
+" vim-textmanip (矩形のコピーや移動)
+
+"}}}
+"---------------------------------
+"[end]     Neko プラグインインストール後の設定
+"---------------------------------
+"End dein Scripts-------------------------
+" vim: foldmethod=marker
+||<
+　
+* 3. プラグインをインストールする
+nvim を起動させると、dein によりインストールが行われる。
+>|sh|
+% nvim
+[dein] Not installed plugins: ['neovim-qt', 'vim-easymotion', 'vim-easy-align', 'unite.vim', 'neosnippet-snippets', 'vimshell', 'vim-indent-guides', 'accelerated-smooth-scroll', 'vim-surround', 'vimfiler.vim', 'linediff.vim', 'open-browser.vim', 'vimproc', 'vim-qfreplace', 'capture.vim', 'thumbnail.vim', 'neosnippet.vim', 'yankround.vim', 'indentLine', 'neocomplcache.vim', 'neomru.vim', 'vim-emacscommandline', 'lightline.vim', 'vinarise.vim', 'vim-repeat', 'qfixgrep']
+[dein] Update started: (2018/05/12 21:38:02)
+[dein] ( 8/26) [======              ] vim-surround
+[dein] ( 9/26) [======              ] vimfiler.vim
+[dein] (10/26) [=======             ] linediff.vim
+[dein] (11/26) [========            ] open-browser.vim
+[dein] (12/26) [=========           ] vimproc
+[dein] (13/26) [==========          ] vim-qfreplace
+[dein] (14/26) [==========          ] capture.vim
+[dein] (15/26) [===========         ] thumbnail.vim
+[dein] (17/26) [=============       ] yankround.vim
+[dein] (18/26) [=============       ] indentLine
+[dein] (19/26) [==============      ] neocomplcache.vim
+[dein] (20/26) [===============     ] neomru.vim
+[dein] (21/26) [================    ] vim-emacscommandline
+[dein] (22/26) [================    ] lightline.vim
+[dein] (23/26) [=================   ] vinarise.vim
+[dein] (24/26) [==================  ] vim-repeat
+[dein] (25/26) [=================== ] qfixgrep
+[dein] Updated plugins:
+[dein]   accelerated-smooth-scroll(1 change)
+[dein]   vim-indent-guides(1 change)
+[dein]   neosnippet-snippets(1 change)
+[dein]   vim-easy-align(1 change)
+[dein]   vim-easymotion(1 change)
+[dein]   vim-surround(1 change)
+[dein]   linediff.vim(1 change)
+[dein]   open-browser.vim(1 change)
+[dein]   vim-qfreplace(1 change)
+[dein]   capture.vim(1 change)
+[dein]   vimproc(1 change)
+[dein]   yankround.vim(1 change)
+[dein]   indentLine(1 change)
+[dein]   thumbnail.vim(1 change)
+[dein]   neosnippet.vim(1 change)
+[dein]   vimshell(1 change)
+[dein]   vim-emacscommandline(1 change)
+[dein]   neomru.vim(1 change)
+[dein]   unite.vim(1 change)
+[dein]   lightline.vim(1 change)
+[dein]   vinarise.vim(1 change)
+[dein]   vim-repeat(1 change)
+[dein]   qfixgrep(1 change)
+[dein]   neocomplcache.vim(1 change)
+[dein]   vimfiler.vim(1 change)
+[dein]   neovim-qt(1 change)
+[dein] Done: (2018/05/12 21:38:19)続けるにはENTERを押すかコマンドを入力してください
+||<
+　
+* 4. プラグインに関する設定を行う
+　
+** 4-1. $HOME/.config/nvim/userautoload/dein/plugins.toml の設定
+** 4-2. $HOME/.config/nvim/userautoload/dein/plugins-lazy.toml の設定
+- plugins.toml, plaugins-lazy.toml の設定である
+- init.vim で本ファイルの読み込みを行わない場合、vimproc_linux64.so のビルドが行われないので注意すること。(手動ビルドは別項に記載した)
+>|sh|
+% mkdir -p $HOME/.config/nvim/userautoload/dein/
+% touch $HOME/.config/nvim/userautoload/dein/plugins.toml 
+% touch $HOME/.config/nvim/userautoload/dein/plugins-lazy.toml 
+||<
+　
+下記ファイルを作成する。
+<b>$HOME/.config/nvim/userautoload/dein/plugins.toml </b>
+>|vim|
+[[plugins]]
+repo = 'Shougo/dein.vim'
+
+[[plugins]]
+repo = 'Shougo/vimproc.vim'
+build = 'make'
+
+[[plugins]]
+repo = 'Shougo/unite.vim.git'
+hook_add = 'source ~/.config/nvim/userautoload/plugins/plugins-unite.vim'
+
+[[plugins]]
+repo = "https://github.com/tyru/caw.vim.git"
+hook_add = '''
+vmap - <Plug>(caw:I:toggle)
+
+[[plugins]]
+repo = 'Shougo/vimfiler.vim'
+depends = 'unite.vim'
+hook_add = '''
+source ~/.config/nvim/plugins/vimfiler.rc.vim
+'''
+||<
+　
+<b>$HOME/.config/nvim/userautoload/dein/plugins-lazy.toml </b>
+>|vim|
+[[plugins]]
+repo = "davidhalter/jedi-vim"
+on_ft = ['python']
+
+[[plugins]]
+repo = 'fatih/vim-go'
+on_ft = ['go']
+
+[[plugins]]
+repo = 'Shougo/unite.vim'
+hook_add = 'source ~/.config/nvim/userautoload/plugins/plugins-unite.vim'
+
+[[plugins]]
+repo = 'Shougo/unite-outline'
+depends = ['unite']
+hook_add = 'source ~/.config/nvim/userautoload/plugins/plugins-unite-outline.vim'
+
+[[plugins]]
+repo = 'hewes/unite-gtags'
+hook_add = 'source ~/.config/nvim/userautoload/plugins/plugins-unite-gtags.vim'
+depends = ['unite']
+||<
+　
+** 4-3. Vimfiler の設定
+<b>参考</b>
+ [https://muunyblue.github.io/c95d62c68196b2d0c1c1de8c7eeb6d50.html#vimfiler:title]
+- \ e によるツリー表示
+- t でツリー展開にする
+- 画面構成の変更
+>|sh|
+% mkdir $HOME/.config/nvim/userautoload/plugins
+% touch $HOME/.config/nvim/vimfiler.rc.vim
+||<
+以下の内容を記述する。
+<b>$HOME/.config/nvim/vimfiler.rc.vim</b>
+>|vim|
+" https://muunyblue.github.io/c95d62c68196b2d0c1c1de8c7eeb6d50.html#vimfiler より. 一部変更した
+call vimfiler#custom#profile('default', 'context', {
+    \ 'safe' : 0,
+    \ 'auto_expand' : 1,
+    \ 'parent' : 0,
+    \ })
+"default explore -> vimfiler
+let g:vimfiler_as_default_explorer = 1
+
+"buffer directory
+"nnoremap <silent> fe :<C-u>VimFilerBufferDir -quit<CR>
+" Nerdtree like
+"nnoremap <C-e> :<C-u>VimFilerBufferDir -split -winwidth=120 -toggle -no-quit<CR>
+autocmd VimEnter * VimFiler -split -simple -winwidth=40 -no-quit -no-focus
+nnoremap <leader>e :VimFilerExplore -split -winwidth=40 -find -no-quit -no-focus<Cr>
+
+"key mapping
+autocmd MyAutoCmd FileType vimfiler call s:vimfiler_my_settings()
+function! s:vimfiler_my_settings()
+  nnoremap <silent><buffer><expr> v vimfiler#do_switch_action('vsplit')
+  nnoremap <silent><buffer><expr> s vimfiler#do_switch_action('split')
+endfunction
+
+" Textmate icons
+let g:vimfiler_tree_leaf_icon = ' '
+let g:vimfiler_tree_opened_icon = '▾'
+let g:vimfiler_tree_closed_icon = '▸'
+let g:vimfiler_file_icon = '-'
+let g:vimfiler_marked_file_icon = '*'
+||<
+　
+正しく vimproc_linux64.so が作れていないかも知れないので、手動で確認しておく。
+vimproc_linux64.so が無ければ、VimFiler が使えないという問題が起きる。
+>|sh|
+% cd $HOME/.config/nvim/repos/github.com/Shougo/vimproc/
+% make
+make -f make_unix.mak
+make[1]: ディレクトリ '/home/neko/.config/nvim/repos/github.com/Shougo/vimproc' に入ります
+cc -W -O2 -Wall -Wno-unused -Wno-unused-parameter -std=gnu99 -pedantic -shared -fPIC  -o lib/vimproc_linux64.so src/proc.c -lutil
+make[1]: ディレクトリ '/home/neko/.config/nvim/repos/github.com/Shougo/vimproc' から出ます
+
+% cp ./lib/vimproc_linux64.so  $HOME/.config/nvim/.cache/init.vim/.dein/lib/
+||<
+　
+**4-4. nvim-qt への S-Insert によるペースト対応
+<b>$HOME/.config/nvim/ginit.vim</b>
+>|vim|
+map! <S-Insert> <C-R>+
+||<
+　
+** 4-5. $HOME/.config/nvim/userautoload/plugins/. 以下に配置する独自設定ファイル
+　
+プラグイン操作に関する独自設定を書いたファイルである。
+　
+*** $HOME/.config/nvim/userautoload/plugins/local_keymap.vim
+>|vim|
+"" .vimrcの編集を簡単にする{{{
+" http://vim-users.jp/2009/09/hack74/ 
+" .vimrcや.gvimrcを編集するためのKey-mappingを定義する
+nnoremap  <Space>ev  :<C-u>edit $HOME/vimrc<CR>
+nnoremap  <Space>eg  :<C-u>edit $HOME/gvimrc<CR>
+" .vimrcや.gvimrcの変更を反映するためのKey-mappingを定義する
+nnoremap  <Space>rv :<C-u>source $HOME/vimrc \| if has('gui_running') \| source $HOME/gvimrc \| endif <CR>
+nnoremap  <Space>rg :<C-u>source $HOME/gvimrc<CR>
+" .vimrcや.gvimrcを変更すると、自動的に変更が反映されるようにする
+augroup MyAutoCmd
+    autocmd!
+augroup END
+if !has('gui_running') && !(has('win32') || has('win64'))
+    " .vimrcの再読込時にも色が変化するようにする
+    autocmd MyAutoCmd BufWritePost $HOME/vimrc nested source $HOME/vimrc
+else
+    " .vimrcの再読込時にも色が変化するようにする
+    autocmd MyAutoCmd BufWritePost $HOME/vimrc source $HOME/vimrc |
+                \if has('gui_running') | source $HOME/gvimrc
+    autocmd MyAutoCmd BufWritePost $HOME/gvimrc if has('gui_running') | source $HOME/gvimrc
+endif
+    "" }}}
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugin_easyalign.vim
+>|vim|
+" ヴィジュアルモードで選択し，easy-align 呼んで整形．(e.g. vip<Enter>)
+vmap <Enter> <Plug>(EasyAlign)
+
+" easy-align を呼んだ上で，移動したりテキストオブジェクトを指定して整形．(e.g. gaip)
+nmap ga <Plug>(EasyAlign)
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugin_easymotion.vim
+>|vim|
+"----------------------------------------------------------------
+" http://haya14busa.com/mastering-vim-easymotion/
+"----------------------------------------------------------------
+" <Space> キーで easy-motion を起動する
+"nmap <Space> <Plug>(easymotion-s2)
+" f キーで easy-motion を起動する
+" nmap f  <Plug>(easymotion-s2)
+
+" ラベルの表示順位を定義する
+"let g:EasyMotion_keys = ';hklyuiopnm,qwertasdgzxcvbjf'
+let g:EasyMotion_keys = 'faslkhjnmie,rmo;uwzpqtdgxcvby'
+
+" ラベル選択時に <Space> か <CR> を押すと 1つ目のマッチに飛ぶ
+let g:EasyMotion_enter_jump_first = 1
+let g:EasyMotion_space_jump_first = 1
+
+" g/ で easy-motion を呼び出す
+" nmap g/ <Plug>(easymotion-sn)
+" xmap g/ <Plug>(easymotion-sn)
+" omap g/ <Plug>(easymotion-tn)
+nmap ,, <Plug>(easymotion-sn)
+xmap ,, <Plug>(easymotion-sn)
+omap ,, <Plug>(easymotion-tn)
+
+" 大小文字区別しない(1)
+let g:EasyMotion_smartcase = 1
+
+" Repeat Motion。C-n や C-p で過去の履歴を表示する。
+map g/ <Plug>(easymotion-repeat)
+" map <C-n> <Plug>(easymotion-next)
+" map <C-p> <Plug>(easymotion-prev)
+" map ; <Plug>(easymotion-next)
+" map , <Plug>(easymotion-prev)
+
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugin_indentguides.vim
+>|vim|
+"" 起動時点から有効にする
+let g:indent_guides_enable_on_vim_startup = 1
+"
+" ハイライトの色を鮮やかにする
+let g:indent_guides_color_change_percent =  6
+"
+" ハイライトの幅を狭める
+let g:indent_guides_guide_size = 1
+"
+"" 色値設定
+let g:indent_guides_auto_colors = 0
+"autocmd VimEnter,Colorscheme * :hi IndentGuidesOdd  guibg='#003060'   ctermbg=3 "青
+"autocmd VimEnter,Colorscheme * :hi IndentGuidesEven guibg='#606060'   ctermbg=4 "白
+"
+autocmd VimEnter,Colorscheme * :hi IndentGuidesOdd  guibg='#303060'   ctermbg=3
+autocmd VimEnter,Colorscheme * :hi IndentGuidesEven guibg='#1e294e'   ctermbg=4 
+
+
+let g:indent_guides_start_level = 2
+let g:indent_guides_exclude_filetypes = ['help', 'nerdtree', 'tagbar', 'unite']
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugin_lightline.vim
+>|vim|
+let g:lightline = { 'colorscheme': 'PaperColor_light', 'mode_map': {'c': 'NORMAL'}, 'active': { 'left': [ [ 'mode', 'paste' ], [ 'fugitive', 'filename' ] ] }, 'component_function': { 'modified': 'LightLineModified', 'readonly': 'LightLineReadonly', 'fugitive': 'LightLineFugitive', 'filename': 'LightLineFilename', 'fileformat': 'LightLineFileformat', 'filetype': 'LightLineFiletype', 'fileencoding': 'LightLineFileencoding', 'mode': 'LightLineMode' } }
+"let g:lightline = { 'colorscheme': 'powerline', 'mode_map': {'c': 'NORMAL'}, 'active': { 'left': [ [ 'mode', 'paste' ], [ 'fugitive', 'filename' ] ] }, 'component_function': { 'modified': 'LightLineModified', 'readonly': 'LightLineReadonly', 'fugitive': 'LightLineFugitive', 'filename': 'LightLineFilename', 'fileformat': 'LightLineFileformat', 'filetype': 'LightLineFiletype', 'fileencoding': 'LightLineFileencoding', 'mode': 'LightLineMode' } }
+"let g:lightline = { 'colorscheme': 'solarized', 'mode_map': {'c': 'NORMAL'}, 'active': { 'left': [ [ 'mode', 'paste' ], [ 'fugitive', 'filename' ] ] }, 'component_function': { 'modified': 'LightLineModified', 'readonly': 'LightLineReadonly', 'fugitive': 'LightLineFugitive', 'filename': 'LightLineFilename', 'fileformat': 'LightLineFileformat', 'filetype': 'LightLineFiletype', 'fileencoding': 'LightLineFileencoding', 'mode': 'LightLineMode' } }
+"let g:lightline = { 'colorscheme': 'default', 'mode_map': {'c': 'NORMAL'}, 'active': { 'left': [ [ 'mode', 'paste' ], [ 'fugitive', 'filename' ] ] }, 'component_function': { 'modified': 'LightLineModified', 'readonly': 'LightLineReadonly', 'fugitive': 'LightLineFugitive', 'filename': 'LightLineFilename', 'fileformat': 'LightLineFileformat', 'filetype': 'LightLineFiletype', 'fileencoding': 'LightLineFileencoding', 'mode': 'LightLineMode' } }
+
+function! LightLineModified()
+  return &ft =~ 'help\|vimfiler\|gundo' ? '' : &modified ? '+' : &modifiable ? '' : '-'
+endfunction
+
+function! LightLineReadonly()
+  return &ft !~? 'help\|vimfiler\|gundo' && &readonly ? 'x' : ''
+endfunction
+
+function! LightLineFilename()
+  return ('' != LightLineReadonly() ? LightLineReadonly() . ' ' : '') .
+        \ (&ft == 'vimfiler' ? vimfiler#get_status_string() :
+        \  &ft == 'unite' ? unite#get_status_string() :
+        \  &ft == 'vimshell' ? vimshell#get_status_string() :
+        \ '' != expand('%:t') ? expand('%:t') : '[No Name]') .
+        \ ('' != LightLineModified() ? ' ' . LightLineModified() : '')
+endfunction
+
+function! LightLineFugitive()
+  try
+    if &ft !~? 'vimfiler\|gundo' && exists('*fugitive#head')
+      return fugitive#head()
+    endif
+  catch
+  endtry
+  return ''
+endfunction
+
+function! LightLineFileformat()
+  return winwidth(0) > 70 ? &fileformat : ''
+endfunction
+
+function! LightLineFiletype()
+  return winwidth(0) > 70 ? (strlen(&filetype) ? &filetype : 'no ft') : ''
+endfunction
+
+function! LightLineFileencoding()
+  return winwidth(0) > 70 ? (strlen(&fenc) ? &fenc : &enc) : ''
+endfunction
+
+function! LightLineMode()
+  return winwidth(0) > 60 ? lightline#mode() : ''
+endfunction
+
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugin_neocomplcache.vim
+>|vim|
+"Note: This option must set it in .vimrc(_vimrc).  NOT IN .gvimrc(_gvimrc)!
+" Disable AutoComplPop.
+let g:acp_enableAtStartup = 0   " ここを 1 にすると AutoComp が動いてしまって neocompl が動かなくなる
+" Use neocomplcache.
+let g:neocomplcache_enable_at_startup = 1
+" Use smartcase.
+let g:neocomplcache_enable_smart_case = 1
+" Set minimum syntax keyword length.
+let g:neocomplcache_min_syntax_length = 3
+let g:neocomplcache_lock_buffer_name_pattern = '\*ku\*'
+
+" Enable heavy features.
+" Use camel case completion.
+"let g:neocomplcache_enable_camel_case_completion = 1
+" Use underbar completion.
+"let g:neocomplcache_enable_underbar_completion = 1
+
+" Define dictionary.
+let g:neocomplcache_dictionary_filetype_lists = {
+    \ 'default' : '',
+    \ 'vimshell' : $HOME.'/.vimshell_hist',
+    \ 'scheme' : $HOME.'/.gosh_completions'
+        \ }
+
+" Define keyword.
+if !exists('g:neocomplcache_keyword_patterns')
+    let g:neocomplcache_keyword_patterns = {}
+endif
+let g:neocomplcache_keyword_patterns['default'] = '\h\w*'
+
+" Plugin key-mappings.
+inoremap <expr><C-g>     neocomplcache#undo_completion()
+inoremap <expr><C-l>     neocomplcache#complete_common_string()
+
+" Recommended key-mappings.
+" <CR>: close popup and save indent.
+inoremap <silent> <CR> <C-r>=<SID>my_cr_function()<CR>
+function! s:my_cr_function()
+  return neocomplcache#smart_close_popup() . "\<CR>"
+  " For no inserting <CR> key.
+  "return pumvisible() ? neocomplcache#close_popup() : "\<CR>"
+endfunction
+" <TAB>: completion.
+inoremap <expr><TAB>  pumvisible() ? "\<C-n>" : "\<TAB>"
+" <C-h>, <BS>: close popup and delete backword char.
+inoremap <expr><C-h> neocomplcache#smart_close_popup()."\<C-h>"
+inoremap <expr><BS> neocomplcache#smart_close_popup()."\<C-h>"
+inoremap <expr><C-y>  neocomplcache#close_popup()
+inoremap <expr><C-e>  neocomplcache#cancel_popup()
+" Close popup by <Space>.
+"inoremap <expr><Space> pumvisible() ? neocomplcache#close_popup() : "\<Space>"
+
+" For cursor moving in insert mode(Not recommended)
+"inoremap <expr><Left>  neocomplcache#close_popup() . "\<Left>"
+"inoremap <expr><Right> neocomplcache#close_popup() . "\<Right>"
+"inoremap <expr><Up>    neocomplcache#close_popup() . "\<Up>"
+"inoremap <expr><Down>  neocomplcache#close_popup() . "\<Down>"
+" Or set this.
+"let g:neocomplcache_enable_cursor_hold_i = 1
+" Or set this.
+"let g:neocomplcache_enable_insert_char_pre = 1
+
+" AutoComplPop like behavior.
+"let g:neocomplcache_enable_auto_select = 1
+
+" Shell like behavior(not recommended).
+"set completeopt+=longest
+"let g:neocomplcache_enable_auto_select = 1
+"let g:neocomplcache_disable_auto_complete = 1
+"inoremap <expr><TAB>  pumvisible() ? "\<Down>" : "\<C-x>\<C-u>"
+
+" Enable omni completion.
+autocmd FileType css setlocal omnifunc=csscomplete#CompleteCSS
+autocmd FileType html,markdown setlocal omnifunc=htmlcomplete#CompleteTags
+autocmd FileType javascript setlocal omnifunc=javascriptcomplete#CompleteJS
+autocmd FileType python setlocal omnifunc=pythoncomplete#Complete
+autocmd FileType xml setlocal omnifunc=xmlcomplete#CompleteTags
+
+" Enable heavy omni completion.
+if !exists('g:neocomplcache_omni_patterns')
+  let g:neocomplcache_omni_patterns = {}
+endif
+if !exists('g:neocomplcache_force_omni_patterns')
+  let g:neocomplcache_force_omni_patterns = {}
+endif
+let g:neocomplcache_omni_patterns.php =
+\ '[^. \t]->\%(\h\w*\)\?\|\h\w*::\%(\h\w*\)\?'
+let g:neocomplcache_omni_patterns.c =
+\ '[^.[:digit:] *\t]\%(\.\|->\)\%(\h\w*\)\?'
+let g:neocomplcache_omni_patterns.cpp =
+\ '[^.[:digit:] *\t]\%(\.\|->\)\%(\h\w*\)\?\|\h\w*::\%(\h\w*\)\?'
+
+" For perlomni.vim setting.
+" https://github.com/c9s/perlomni.vim
+let g:neocomplcache_omni_patterns.perl =
+\ '[^. \t]->\%(\h\w*\)\?\|\h\w*::\%(\h\w*\)\?'
+
+
+"nnoremap <silent><C-g><C-n> :<C-u>NeoComplCacheEnable<CR>
+nnoremap <C-g><C-n> :<C-u>NeoComplCacheEnable<CR>
+
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugin_qfixgrep.vim
+>|vim|
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"" 使用する grep
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+""let mygrepprg = 'grep\ -rnIH\ --exclude-dir=.svn\ --exclude-dir=.git '
+"let mygrepprg = 'grep'
+"
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"" Windowsのcygwin grep用のダメ文字対策設定(デフォルト)
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"let MyGrep_DamemojiReplaceReg = '(..)'
+"
+"let MyGrep_ExcludeReg = '[~#]$\|\.bak$\|\.o$\|\.obj$\|\.exe$\|[/\\]tags$\|^tags$|[/\\].cvs[/\\]|[/\\].svn[/\\]|[/\\].git[/\\]'
+"
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugin_srcexpl.vim
+>|vim|
+" Set refresh time in ms
+let g:SrcExpl_RefreshTime = 1000
+" Is update tags when SrcExpl is opened
+let g:SrcExpl_isUpdateTags = 0
+" Tag update command
+let g:SrcExpl_updateTagsCmd = 'ctags --sort=foldcase %'
+" Update all tags
+function! g:SrcExpl_UpdateAllTags()
+  let g:SrcExpl_updateTagsCmd = 'ctags --sort=foldcase -R .'
+  call g:SrcExpl_UpdateTags()
+  let g:SrcExpl_updateTagsCmd = 'ctags --sort=foldcase %'
+endfunction
+" Source Explorer Window Height
+let g:SrcExpl_winHeight = 11
+" Mappings
+"let g:SrcExpl_UpdateTags = 1
+"let g:SrcExpl_WinHeight = 10
+let g:SrcExpl_pluginList = ["__Tag_List__", "NERD_tree_1", "Source_Explorer", "*unite*", "*vimfiler* - explorer", "__Tagbar__" ]
+
+nn [srce] <Nop>
+nm <Leader>sc [srce]
+nn <silent> [srce]<CR> :SrcExplToggle<CR>
+"nn <silent> [srce]u :call g:SrcExpl_UpdateTags()<CR>
+"nn <silent> [srce]a :call g:SrcExpl_UpdateAllTags()<CR>
+nn <silent> [srce]n :call g:SrcExpl_NextDef()<CR>
+nn <silent> [srce]p :call g:SrcExpl_PrevDef()<CR>
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugin_tagbar.vim
+>|vim|
+let g:tagbar_ctags_bin="/usr/bin/ctags"
+
+nn [tagbar] <Nop>
+nm <Leader>t [tagbar]
+nn <silent> [tagbar]<CR> :<C-u>Tagbar<CR>
+nn <silent> [tagbar]t    :<C-u>TagbarToggle<CR>
+nn <silent> [tagbar]c    :<C-u>TagbarClose<CR>
+
+" ステータスラインの参考 %{tagbar#currenttag('[%s]','')} がタグを表示している部分
+set statusline=%F%m%r%h%w\%=%{tagbar#currenttag('[%s]','')}\[Pos=%v,%l]\[Len=%L]
+
+"autocmd VimEnter * execute 'Tagbar'
+"autocmd WinEnter * execute 'Tagbar'
+"autocmd WinLeave * execute 'Tagbar'
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugin_textmanip.vim
+>|vim|
+" 選択したテキストの移動
+xmap <M-j> <Plug>(textmanip-move-down)
+xmap <M-k> <Plug>(textmanip-move-up)
+xmap <M-h> <Plug>(textmanip-move-left)
+xmap <M-l> <Plug>(textmanip-move-right)
+"" 行の複製
+xmap <M-d> <Plug>(textmanip-duplicate-down)
+xmap <M-u> <Plug>(textmanip-duplicate-up)
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugin_thumbnail.vim
+>|vim|
+"nnoremap  tt  :<C-u>Thumbnail -here<CR>
+"nmap  tti  <Plug>(Thumbnail_start_insert)
+
+"nmap tt [thumbnail]
+"nnoremap <silent> [thumbnail]i :<C-u>Thumbnail<Space>-here<CR>
+
+nnoremap <silent> tt :<C-u>Thumbnail<Space>-here<CR>
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugin_vim_open_browser.vim
+>|vim|
+let g:netrw_nogx = 1 " disable netrw's gx mapping.
+nmap gx <Plug>(openbrowser-smart-search)
+vmap gx <Plug>(openbrowser-smart-search)
+
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugin_vimfiler.vim
+>|vim|
+let g:vimfiler_as_default_explorer = 1 
+let g:vimfiler_tree_leaf_icon = ' ' 
+let g:vimfiler_tree_opened_icon = '▾' 
+let g:vimfiler_tree_closed_icon = '▸' 
+let g:vimfiler_file_icon = '-' 
+let g:vimfiler_marked_file_icon = '*' 
+
+"autocmd VimEnter * VimFiler -split -simple -winwidth=40 -no-quit -no-focus
+nnoremap <leader>e :VimFilerExplore -split -winwidth=40 -find -no-quit -no-focus<Cr>
+"autocmd VimEnter * VimFilerExplorer
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugin_yankround.vim
+>|vim|
+" ファイルタイプ別のプラグイン/インデントを有効にする
+filetype plugin indent on
+
+nmap p <Plug>(yankround-p)
+nmap P <Plug>(yankround-P)
+nmap gp <Plug>(yankround-gp)
+nmap gP <Plug>(yankround-gP)
+nmap <C-p> <Plug>(yankround-prev)
+nmap <C-n> <Plug>(yankround-next)
+let g:yankround_max_histroy = 50
+nnoremap <silent>g<C-p> :<C-u>CtrlPYankRound<CR>
+nnoremap <silent>g<C-p> :<C-u>CtrlPYankRound<CR>
+
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugins-unite-gtags.vim
+>|vim|
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugins-unite-outline.vim
+>|vim|
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/plugins-unite.vim
+>|vim|
+" " unite.vim {{{
+" " The prefix key.
+" nnoremap    [unite]   <Nop>
+" nmap    <Leader>f [unite]  
+" " unite.vim keymap 
+" " https://github.com/alwei/dotfiles/blob/3760650625663f3b08f24bc75762ec843ca7e112/.vimrc 
+" nnoremap [unite]u  :<C-u>Unite -no-split<Space>
+" nnoremap <silent> [unite]f :<C-u>Unite<Space>buffer<CR>
+" nnoremap <silent> [unite]b :<C-u>Unite<Space>bookmark<CR>
+" nnoremap <silent> [unite]m :<C-u>Unite<Space>file_mru<CR>
+" nnoremap <silent> [unite]r :<C-u>UniteWithBufferDir file<CR>
+" nnoremap <silent> ,vr :UniteResume<CR>  
+" vinarise
+let g:vinarise_enable_auto_detect = 1   
+" unite-build map nnoremap <silent> ,vb :Unite build<CR> nnoremap <silent> ,vcb :Unite build:!<CR> nnoremap <silent> ,vch :UniteBuildClearHighlight<CR> "" }}}
+
+""" http://qiita.com/knt45/items/6f16c6b041ce309076d6
+"インサートモードで開始
+let g:unite_enable_start_insert=1
+"ヒストリー/ヤンク機能を有効化
+let g:unite_source_history_yank_enable =1
+"prefix keyの設定
+nmap <Space> [unite]
+
+"スペースキーとaキーでカレントディレクトリを表示
+"nnoremap <silent> [unite]a :<C-u>UniteWithBufferDir -buffer-name=files file<CR>
+nnoremap <silent> [unite]<CR> :<C-u>UniteWithBufferDir -buffer-name=files file<CR>
+
+"スペースキーとfキーでバッファと最近開いたファイル一覧を表示
+nnoremap <silent> [unite]f :<C-u>Unite<Space>file_mru buffer file<CR>
+
+"スペースキーとdキーで最近開いたディレクトリを表示
+nnoremap <silent> [unite]d :<C-u>Unite<Space>directory_mru<CR>
+
+"スペースキーとbキーでバッファを表示
+nnoremap <silent> [unite]b :<C-u>Unite<Space>buffer<CR>
+
+""スペースキーとxキーでレジストリを表示
+"nnoremap <silent> [unite]x :<C-u>Unite<Space>-buffer-name=register register<CR>
+
+"スペースキーとtキーでタブを表示
+"nnoremap <silent> [unite]t :<C-u>Unite<Space>tab<CR>
+
+"スペースキーとhキーでヒストリ/ヤンクを表示
+nnoremap <silent> [unite]h :<C-u>Unite<Space>history/yank<CR>
+
+"スペースキーとoキーでoutline
+nnoremap <silent> [unite]o :<C-u>Unite<Space>outline<CR>
+
+"スペースキーとaキーでfile_rec:!
+"nnoremap <silent> [unite]<CR> :<C-u>Unite<Space>file_rec:!<CR>
+nnoremap <silent> [unite]aaa :<C-u>Unite<Space>file_rec:! -buffer-name=files<CR>
+
+"スペースキーとgキーで grep
+nnoremap <silent> [unite]g :<C-u>Unite<Space>grep<CR>
+
+"スペースキーとrキーで grep
+nnoremap <silent> [unite]r :<C-u>Unite<Space>UniteResume search-buffer<CR>
+
+"スペースキーとlキーで line (バッファの行を検索)
+nnoremap <silent> [unite]l :<C-u>Unite<Space>line<CR>
+
+"スペースキーとjキーで bookmark (バッファの行を検索)
+nnoremap <silent> [unite]j :<C-u>Unite<Space>bookmark<CR>
+"nnoremap <silent> [unite]j :<C-u>Unite<Space>bookmark -quick-match<CR>
+"bookmark の登録
+nnoremap <silent> [unite]m :<C-u>UniteBookmarkAdd<CR>
+
+" カーソル位置の単語をgrep検索 (カレントパス . がうまく解釈されない)
+"nnoremap <silent> [unite]w :<C-u>Unite grep:.. -buffer-name=search-buffer<CR><C-R><C-W>
+"nnoremap <leader>grw       :<C-u>Unite grep:. -buffer-name=search-buffer<CR><C-R><C-W>
+"nnoremap <leader>grw       :<C-u>Unite grep:. -buffer-name=search-buffer<CR><C-R><C-W>
+"nnoremap <leader>grw :<C-u>Unite grep:. -buffer-name=search-buffer<CR><C-R><C-W>
+
+" unite grep に ag(The Silver Searcher) を使う
+if executable('ag')
+  let g:unite_source_grep_command = 'ag'
+  let g:unite_source_grep_default_opts = '--nogroup --nocolor --column'
+  let g:unite_source_grep_recursive_opt = ''
+endif
+
+"unite.vimを開いている間のキーマッピング
+autocmd FileType unite call s:unite_my_settings()
+
+function! s:unite_my_settings()"{{{
+    " ESCでuniteを終了
+    nmap <buffer> <ESC> <Plug>(unite_exit)
+endfunction"}}}
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"vim-startify (直前に使用したファイル) の Unite 版
+"http://lsifrontend.blog100.fc2.com/blog-entry-832.html
+"http://d.hatena.ne.jp/osyo-manga/20131217/1387292034
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"   let g:unite_source_alias_aliases = {
+"   \ "startup_file_mru" : {
+"   \  "source" : "file_mru",
+"   \ },
+"   \ "startup_directory_mru" : {
+"   \  "source" : "directory_mru",
+"   \ },
+"   \}
+"   
+"   " 表示数の制限
+"   call unite#custom_max_candidates("startup_file_mru", 10)
+"   call unite#custom_max_candidates("startup_directory_mru", 5)
+"   
+"   if !exists("g:unite_source_menu_menus")
+"     let g:unite_source_menu_menus = {}
+"   endif
+"   
+"   " :Unite menu:startup での出力リスト
+"   let g:unite_source_menu_menus.startup = {
+"   \ "description" : "startup menu",
+"   \ "command_candidates" : [
+"   \   [ "edit",  "edit" ],
+"   \   [ "vimrc",  "edit " . $HOME . "/vimrc"],
+"   \   [ "gvimrc", "edit " . $HOME . "/gvimrc"],
+"   \   [ "vimfiler", "VimFiler" ],
+"   \   [ "unite-howm", "Unite qfixhowm/new qfixhowm:nocache -hide-source-names -no-split" ],
+"   \   [ "unite-update", "Unite -log neobundle/update" ],
+"   \   [ "unite-file_mru", "Unite file_mru" ],
+"   \   [ "unite-directory_mru", "Unite directory_mru" ],
+"   \ ]
+"   \}
+"   
+"   command! UniteStartup
+"   \ Unite
+"   \ output:echo:"===:file:mru:===":! startup_file_mru
+"   \ output:echo:":":!
+"   \ output:echo:"===:directory:mru:===":! startup_directory_mru
+"   \ output:echo:":":!
+"   \ output:echo:"===:menu:===":! menu:startup
+"   \ -hide-source-names
+"   \ -no-split
+"   \ -quick-match
+"   
+"   augroup startup
+"       autocmd!
+"       autocmd VimEnter * nested :UniteStartup
+"   augroup END
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" " Unite-tag
+" autocmd BufEnter *
+" \   if empty(&buftype)
+" \|      nnoremap <buffer> <C-k> :<C-u>UniteWithCursorWord -immediately tag<CR>
+" \|  endif
+" 
+" autocmd BufEnter *
+" \   if empty(&buftype)
+" \|      nnoremap <buffer> <C-m> :<C-u>Unite jump<CR>
+" \|  endif
+" 
+||<
+　
+*** $HOME/.config/nvim/userautoload/plugins/vimfiler.rc.vim
+>|vim|
+" https://muunyblue.github.io/c95d62c68196b2d0c1c1de8c7eeb6d50.html#vimfiler より. 一部変更した
+call vimfiler#custom#profile('default', 'context', {
+    \ 'safe' : 0,
+    \ 'auto_expand' : 1,
+    \ 'parent' : 0,
+    \ })
+"default explore -> vimfiler
+let g:vimfiler_as_default_explorer = 1
+"buffer directory
+"nnoremap <silent> fe :<C-u>VimFilerBufferDir -quit<CR>
+" Nerdtree like
+"nnoremap <C-e> :<C-u>VimFilerBufferDir -split -winwidth=120 -toggle -no-quit<CR>
+autocmd VimEnter * VimFiler -split -simple -winwidth=40 -no-quit -no-focus
+nnoremap <leader>e :VimFilerExplore -split -winwidth=40 -find -no-quit -no-focus<Cr>
+"key mapping
+"autocmd MyAutoCmd FileType vimfiler call s:vimfiler_my_settings()
+function! s:vimfiler_my_settings()
+  nnoremap <silent><buffer><expr> v vimfiler#do_switch_action('vsplit')
+  nnoremap <silent><buffer><expr> s vimfiler#do_switch_action('split')
+endfunction
+" Textmate icons
+let g:vimfiler_tree_leaf_icon = ' '
+let g:vimfiler_tree_opened_icon = '▾'
+let g:vimfiler_tree_closed_icon = '▸'
+let g:vimfiler_file_icon = '-'
+let g:vimfiler_marked_file_icon = '*'
+
+||<
+　
+
+　
+**$HOME/.Xdefaults
+あまり nvim への関係ないと思うが、一応メモ。
+>||
+*VT100.translations: #override  <Btn3Down>: insert-selection(CLIPBOARD)
+XTerm*VT100.Translations: #override \
+ShiftInsert: insert-selection(CLIPBOARD) \n\
+Insert: insert-selection(PRIMARY) \n\
+Shift: insert-selection(CLIPBOARD) \n\
+Shift: select-start() \n\
+Shift: select-extend() \n\
+Shift: select-end(CLIPBOARD)
+||<
+　
+**課題・残作業
+- nvim-qt でクリップボードが使えない
+-- $HOME/.config/gvim/ginit.vim の作成と「set clipboard=unnamed,unnamedplus」の記述により、完璧では無いが最低限の課題は解決。
+-- xterm などで C-k でカットしたら、それを S-Insert で gvim にペースト出来れば最高なのだが。
+- nvim-qt で画面サイズが効かない
+-- とりあえず以下である程度は凌げそう。winpos 相当があれば良いのだが。
+--- nvim-qt --fullscreen で最大サイズで起動
+--- nvim-qt --geometry 1500x800 でサイズ指定
+- gtags との連携
+- denite への移行
+- <s>init.vim 変更後の vimfiler のエラー対応 (TOMLでエラー発生。Lazy に変えてみる？)</s>
+-- <s>Lazy 導入済みだが、解決せず</s>
+--- 原因は、使用していた unite.vim のバージョンが古く、vim8.0 から丸ごとコピーしたものであった。
+--- 最新の unite.vim をインストールすることで解決した。
+- migemo の導入検討。(Windows のときは重たくて外していた)
+ 
+
+
+*その他
+** 新たに nvim を入れ直したい場合の手順
+>||
+% cd $HOME/.config/nvim
+(init.vim や userautoload/ を別ディレクトリに退避させておく)
+% rm -rf  .* \.*
+% vim init.vim
+(旧、init.vim を使っても良い)
+% mkdir -p repos/github.com/Shougo/dein.vim
+% git clone https://github.com/Shougo/dein.vim repos/github.com/Shougo/dein.vim/
+( userautoload/ を復旧する)
+% nvim
+(プラグインのインストールが行われる)
+(:VimFiler を実行してみて、vimproc_linux64.so が無いと言われたら以下を行う)
+% cd repos/github.com/Shougo/vimproc/
+% make
+% cp repos/github.com/Shougo/vimproc/lib/vimproc_linux64.so  .cache/init.vim/.dein/lib/
+||<
+　
+**意図的に導入しなかったプラグイン
+- tagbar, SrcExp, Ctrl-P は入れない
+
+ 
+
